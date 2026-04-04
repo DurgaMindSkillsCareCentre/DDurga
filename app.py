@@ -5,15 +5,15 @@ import urllib.parse
 # ================= CONFIG =================
 WHATSAPP_NUMBER = "917395944527"
 
-# Get API key from Streamlit secrets
+# Get API key securely
 API_KEY = st.secrets.get("GEMINI_API_KEY")
 
 if not API_KEY:
-    st.error("❌ API Key not found. Add it in Streamlit Secrets.")
+    st.error("❌ API Key not found. Please add it in Streamlit Secrets.")
     st.stop()
 
-# ✅ Correct Gemini endpoint (FIXED)
-URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={API_KEY}"
+# ✅ FINAL WORKING MODEL + ENDPOINT
+URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={API_KEY}"
 
 st.set_page_config(page_title="Durga Psychiatric Centre")
 
@@ -36,19 +36,18 @@ def get_ai_reply(user_input):
         payload = {
             "contents": [
                 {
-                    "role": "user",
                     "parts": [
                         {
                             "text": f"""
-You are a professional mental health assistant.
+You are a compassionate and professional mental health assistant.
 
-Rules:
+Guidelines:
 - Be empathetic and supportive
 - Ask meaningful follow-up questions
-- Do NOT repeat same sentence
-- Keep answers short and human-like
+- Avoid repeating the same sentence
+- Keep responses short and natural
 
-Conversation so far:
+Conversation history:
 {st.session_state.history}
 
 User: {user_input}
@@ -63,8 +62,7 @@ User: {user_input}
 
         if response.status_code == 200:
             data = response.json()
-            reply = data["candidates"][0]["content"]["parts"][0]["text"]
-            return reply
+            return data["candidates"][0]["content"]["parts"][0]["text"]
         else:
             return f"❌ API ERROR {response.status_code}: {response.text}"
 
@@ -85,7 +83,7 @@ if submitted and user_input.strip():
     st.session_state.messages.append(("You", user_input))
     st.session_state.messages.append(("Assistant", reply))
 
-    # Save history for better AI context
+    # Store history for better AI responses
     st.session_state.history += f"\nUser: {user_input}\nAssistant: {reply}"
 
     st.rerun()
@@ -102,7 +100,7 @@ name = st.text_input("Name")
 phone = st.text_input("Phone Number")
 concern = st.selectbox("Concern", ["Stress", "Anxiety", "Depression", "Other"])
 
-# Create WhatsApp message
+# WhatsApp message
 message = f"""Hello, I need consultation.
 
 Name: {name}
@@ -113,7 +111,7 @@ Concern: {concern}
 encoded_msg = urllib.parse.quote(message)
 wa_link = f"https://wa.me/{WHATSAPP_NUMBER}?text={encoded_msg}"
 
-# ✅ Single clean button (FIXED UX)
+# ✅ SINGLE BUTTON (FIXED)
 st.link_button("💬 Chat on WhatsApp", wa_link)
 
 st.caption("🔒 Your information is confidential.")
