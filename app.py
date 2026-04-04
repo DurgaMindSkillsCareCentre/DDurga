@@ -1,21 +1,25 @@
 import streamlit as st
 import urllib.parse
-import requests
+import google.generativeai as genai
 
 # ========= CONFIG =========
 WHATSAPP_NUMBER = "917395944527"
-GEMINI_API_KEY = "AIzaSyCfh6C0d19D9zS2pqnuZHtV164Zhw32wD4"
 
-GEMINI_URL = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+# 🔐 API KEY FROM SECRETS (NOT IN CODE)
+genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 
+# ✅ Stable model + chat session
+model = genai.GenerativeModel("gemini-1.5-flash")
+
+# ========= PAGE =========
 st.set_page_config(page_title="Durga Psychiatric Centre")
 
 # ========= SESSION =========
+if "chat" not in st.session_state:
+    st.session_state.chat = model.start_chat(history=[])
+
 if "messages" not in st.session_state:
     st.session_state.messages = []
-
-if "history" not in st.session_state:
-    st.session_state.history = ""
 
 # ========= HEADER =========
 st.title("Durga Psychiatric Centre")
@@ -23,58 +27,32 @@ st.write("AI Mental Health Assistant")
 
 st.markdown("---")
 
-# ========= GEMINI API =========
+# ========= CHAT =========
+st.subheader("Talk to our AI Assistant")
+
 def get_ai_reply(user_input):
     try:
-        payload = {
-            "contents": [
-                {
-                    "parts": [
-                        {
-                            "text": f"""
+        prompt = f"""
 You are a compassionate mental health assistant.
 
+Rules:
 - Be empathetic
-- Ask specific follow-up questions
-- Avoid repeating sentences
-- Keep answers short (2-3 lines)
-
-Conversation so far:
-{st.session_state.history}
+- Ask meaningful follow-up questions
+- Avoid repeating same sentences
+- Keep responses short (2-3 lines)
+- Encourage seeking professional help if needed
 
 User: {user_input}
 """
-                        }
-                    ]
-                }
-            ]
-        }
+        response = st.session_state.chat.send_message(prompt)
 
-        response = requests.post(GEMINI_URL, json=payload)
-
-        if response.status_code == 200:
-            data = response.json()
-            return data["candidates"][0]["content"]["parts"][0]["text"]
+        if response and hasattr(response, "text") and response.text:
+            return response.text.strip()
         else:
-            return fallback_reply(user_input)
+            return "I'm here to listen. Can you tell me more?"
 
-    except:
-        return fallback_reply(user_input)
-
-# ========= FALLBACK =========
-def fallback_reply(text):
-    text = text.lower()
-
-    if "stress" in text:
-        return "It seems stress is affecting you. Is it more from work or personal life?"
-    elif "work" in text:
-        return "Work pressure can be tough. What exactly is causing stress at work?"
-    elif "deadline" in text:
-        return "Deadlines can feel overwhelming. Are they too frequent or too tight?"
-    elif "family" in text:
-        return "Family issues can be emotionally heavy. What situation is troubling you?"
-    else:
-        return "I'm listening. Can you tell me more?"
+    except Exception as e:
+        return "⚠️ AI service temporarily unavailable. Please try again."
 
 # ========= INPUT =========
 with st.form("chat_form", clear_on_submit=True):
@@ -82,37 +60,38 @@ with st.form("chat_form", clear_on_submit=True):
     submit = st.form_submit_button("Send")
 
 if submit and user_input:
-
-    reply = get_ai_reply(user_input)
-
     st.session_state.messages.append(("You", user_input))
+    reply = get_ai_reply(user_input)
     st.session_state.messages.append(("Assistant", reply))
-
-    st.session_state.history += f"\nUser: {user_input}\nAssistant: {reply}"
-
     st.rerun()
 
 # ========= DISPLAY =========
 for role, msg in st.session_state.messages:
     st.write(f"**{role}:** {msg}")
 
-# ========= FORM =========
+# ========= CONSULTATION =========
 st.markdown("---")
 st.subheader("Book a Consultation")
 
 name = st.text_input("Name")
 phone = st.text_input("Phone Number")
-issue = st.selectbox("Concern", ["Stress","Anxiety","Depression","Other"])
+issue = st.selectbox(
+    "Concern",
+    ["Stress", "Anxiety", "Depression", "Relationship", "Addiction", "Other"]
+)
 
-message = f"""Hello, I need consultation.
+# ========= WHATSAPP =========
+message = f"""Hello, I would like to book a consultation.
 
 Name: {name}
 Phone: {phone}
 Concern: {issue}
 """
 
-wa_link = f"https://wa.me/{WHATSAPP_NUMBER}?text={urllib.parse.quote(message)}"
+encoded = urllib.parse.quote(message)
+wa_link = f"https://wa.me/{WHATSAPP_NUMBER}?text={encoded}"
 
 st.link_button("Open WhatsApp", wa_link)
 
+# ========= FOOTER =========
 st.caption("Your information is confidential.")
