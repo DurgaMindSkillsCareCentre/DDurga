@@ -1,117 +1,90 @@
 import streamlit as st
 import requests
-import urllib.parse
 
 # ================= CONFIG =================
+API_KEY = st.secrets["GEMINI_API_KEY"]
 WHATSAPP_NUMBER = "917395944527"
 
-# Get API key securely
-API_KEY = st.secrets.get("GEMINI_API_KEY")
+MODEL_PRIORITY = [
+    "models/gemini-2.0-flash",
+    "models/gemini-2.0-flash-001",
+    "models/gemini-2.0-flash-lite",
+    "models/gemini-flash-latest"
+]
 
-if not API_KEY:
-    st.error("❌ API Key not found. Please add it in Streamlit Secrets.")
-    st.stop()
+# ================= PAGE =================
+st.set_page_config(page_title="Durga AI Therapist", layout="centered")
 
-# ✅ FINAL WORKING MODEL + ENDPOINT
-URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={API_KEY}"
+st.title("🧠 AI Mental Health Assistant")
 
-st.set_page_config(page_title="Durga Psychiatric Centre")
-
-# ================= SESSION =================
+# ================= CHAT STATE =================
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-if "history" not in st.session_state:
-    st.session_state.history = ""
+# ================= INPUT =================
+user_input = st.text_area("Tell me what you're feeling:")
 
-# ================= HEADER =================
-st.title("🧠 Durga Psychiatric Centre")
-st.write("AI Mental Health Assistant")
+# ================= AI FUNCTION =================
+def ask_gemini(prompt):
+    for model in MODEL_PRIORITY:
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/{model}:generateContent?key={API_KEY}"
 
+            payload = {
+                "contents": [
+                    {
+                        "parts": [
+                            {"text": f"You are a professional therapist. Respond empathetically.\nUser: {prompt}"}
+                        ]
+                    }
+                ]
+            }
+
+            response = requests.post(url, json=payload, timeout=10)
+
+            if response.status_code == 200:
+                data = response.json()
+                return data["candidates"][0]["content"]["parts"][0]["text"]
+
+        except:
+            continue
+
+    return "⚠️ AI temporarily unavailable. Please try again."
+
+# ================= SEND BUTTON =================
+if st.button("Send"):
+    if user_input.strip():
+        st.session_state.messages.append(("You", user_input))
+
+        reply = ask_gemini(user_input)
+
+        st.session_state.messages.append(("Assistant", reply))
+
+# ================= DISPLAY =================
+for role, msg in st.session_state.messages:
+    st.markdown(f"**{role}:** {msg}")
+
+# ================= WHATSAPP =================
 st.markdown("---")
 
-# ================= GEMINI FUNCTION =================
-def get_ai_reply(user_input):
-    try:
-        payload = {
-            "contents": [
-                {
-                    "parts": [
-                        {
-                            "text": f"""
-You are a compassionate and professional mental health assistant.
+st.markdown(
+    f"""
+    <a href="https://wa.me/{WHATSAPP_NUMBER}" target="_blank">
+        <button style="background-color:#25D366;color:white;padding:12px 20px;
+        border:none;border-radius:8px;font-size:16px;">
+        💬 Chat on WhatsApp
+        </button>
+    </a>
+    """,
+    unsafe_allow_html=True
+)
 
-Guidelines:
-- Be empathetic and supportive
-- Ask meaningful follow-up questions
-- Avoid repeating the same sentence
-- Keep responses short and natural
-
-Conversation history:
-{st.session_state.history}
-
-User: {user_input}
-"""
-                        }
-                    ]
-                }
-            ]
-        }
-
-        response = requests.post(URL, json=payload)
-
-        if response.status_code == 200:
-            data = response.json()
-            return data["candidates"][0]["content"]["parts"][0]["text"]
-        else:
-            return f"❌ API ERROR {response.status_code}: {response.text}"
-
-    except Exception as e:
-        return f"❌ ERROR: {str(e)}"
-
-# ================= CHAT INPUT =================
-with st.form("chat_form", clear_on_submit=True):
-    user_input = st.text_area(
-        "Tell me what you're feeling:",
-        placeholder="Example: I feel stressed due to work pressure"
-    )
-    submitted = st.form_submit_button("Send")
-
-if submitted and user_input.strip():
-    reply = get_ai_reply(user_input)
-
-    st.session_state.messages.append(("You", user_input))
-    st.session_state.messages.append(("Assistant", reply))
-
-    # Store history for better AI responses
-    st.session_state.history += f"\nUser: {user_input}\nAssistant: {reply}"
-
-    st.rerun()
-
-# ================= DISPLAY CHAT =================
-for role, msg in st.session_state.messages:
-    st.write(f"**{role}:** {msg}")
-
-# ================= CONSULTATION FORM =================
+# ================= BOOKING =================
 st.markdown("---")
 st.subheader("📅 Book a Consultation")
 
 name = st.text_input("Name")
 phone = st.text_input("Phone Number")
-concern = st.selectbox("Concern", ["Stress", "Anxiety", "Depression", "Other"])
 
-# WhatsApp message
-message = f"""Hello, I need consultation.
-
-Name: {name}
-Phone: {phone}
-Concern: {concern}
-"""
-
-encoded_msg = urllib.parse.quote(message)
-wa_link = f"https://wa.me/{WHATSAPP_NUMBER}?text={encoded_msg}"
-
-# ✅ SINGLE BUTTON (FIXED)
-st.link_button("💬 Chat on WhatsApp", wa_link)
-
-st.caption("🔒 Your information is confidential.")
+if st.button("Submit"):
+    st.success("We will contact you shortly!")
