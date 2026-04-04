@@ -1,87 +1,109 @@
 import streamlit as st
 import urllib.parse
-import random
+import google.generativeai as genai
 
+# ========= CONFIG =========
 WHATSAPP_NUMBER = "917395944527"
+GEMINI_API_KEY = "AIzaSyC_3bp0o5I46PGNl_cYer4A5o-kEZVKOx0"  # 🔴 Use fresh key
 
-st.set_page_config(page_title="Durga Psychiatric Centre", page_icon="")
+genai.configure(api_key=GEMINI_API_KEY)
+
+# ✅ BEST WORKING METHOD (IMPORTANT)
+try:
+    model = genai.GenerativeModel("gemini-1.5-flash")
+    chat = model.start_chat(history=[])
+    GEMINI_OK = True
+except:
+    GEMINI_OK = False
+
+st.set_page_config(page_title="Durga Psychiatric Centre")
 
 # ========= SESSION =========
-if "history" not in st.session_state:
-    st.session_state.history = []
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+if "chat" not in st.session_state:
+    if GEMINI_OK:
+        st.session_state.chat = model.start_chat(history=[])
+    else:
+        st.session_state.chat = None
 
 # ========= HEADER =========
-st.title(" Durga Psychiatric Centre")
-st.write("Confidential Mental Health Support")
+st.title("Durga Psychiatric Centre")
+st.write("AI Mental Health Assistant")
 
 st.markdown("---")
 
-# ========= CHATBOT =========
-st.subheader(" Talk to our Assistant")
-
-def bot_reply(text):
+# ========= FALLBACK =========
+def fallback_reply(text):
     text = text.lower()
 
     if "stress" in text:
-        return random.choice([
-            "I understand you're feeling stressed. Is it work-related or personal?",
-            "Stress can feel overwhelming. What seems to be causing it?",
-            "Can you tell me more about your stress?"
-        ])
-
+        return "Stress can feel heavy. Is it mainly from studies, work, or personal life?"
+    elif "work" in text:
+        return "Work pressure can be exhausting. What part of work is affecting you most?"
+    elif "family" in text:
+        return "Family issues can be emotionally difficult. What situation is troubling you?"
     elif "anxiety" in text:
-        return random.choice([
-            "Anxiety can feel intense. When do you feel it the most?",
-            "You're not alone. Can you describe your anxiety?",
-        ])
-
-    elif "depression" in text:
-        return "I'm sorry you're feeling this way. How long have you been experiencing this?"
-
+        return "Anxiety can feel intense. When do you experience it most?"
     else:
-        return "I'm here to listen. Can you tell me more?"
+        return "I understand. Can you explain a little more about what you're going through?"
 
-# Chat input
+# ========= AI FUNCTION =========
+def get_ai_reply(user_input):
+
+    if not GEMINI_OK or st.session_state.chat is None:
+        return fallback_reply(user_input)
+
+    try:
+        response = st.session_state.chat.send_message(user_input)
+
+        if response and hasattr(response, "text") and response.text:
+            return response.text.strip()
+        else:
+            return fallback_reply(user_input)
+
+    except Exception as e:
+        return fallback_reply(user_input)
+
+# ========= INPUT =========
 with st.form("chat_form", clear_on_submit=True):
     user_input = st.text_area("Tell me what you're feeling:")
     submit = st.form_submit_button("Send")
 
 if submit and user_input:
-    st.session_state.history.append(("You", user_input))
-    reply = bot_reply(user_input)
-    st.session_state.history.append(("Assistant", reply))
+    st.session_state.messages.append(("You", user_input))
+
+    reply = get_ai_reply(user_input)
+
+    st.session_state.messages.append(("Assistant", reply))
+
     st.rerun()
 
-# Display chat
-for role, msg in st.session_state.history:
+# ========= DISPLAY =========
+for role, msg in st.session_state.messages:
     st.write(f"**{role}:** {msg}")
 
 # ========= FORM =========
 st.markdown("---")
-st.subheader(" Book a Consultation")
+st.subheader("Book a Consultation")
 
 name = st.text_input("Name")
 phone = st.text_input("Phone Number")
-issue = st.selectbox("Concern", ["Stress", "Anxiety", "Depression", "Relationship", "Addiction", "Other"])
+issue = st.selectbox(
+    "Concern",
+    ["Stress", "Anxiety", "Depression", "Relationship", "Addiction", "Other"]
+)
 
-# ========= WHATSAPP FLOW =========
-if st.button(" Open WhatsApp"):
-
-    if not name or not phone:
-        st.error("Please fill all details")
-    else:
-        message = f"""Hello, I would like to book a consultation.
+message = f"""Hello, I need consultation.
 
 Name: {name}
 Phone: {phone}
 Concern: {issue}
 """
 
-        encoded = urllib.parse.quote(message)
-        wa_link = f"https://wa.me/{WHATSAPP_NUMBER}?text={encoded}"
+wa_link = f"https://wa.me/{WHATSAPP_NUMBER}?text={urllib.parse.quote(message)}"
 
-        st.success("Tap below to open WhatsApp")
-        st.link_button(" Open WhatsApp Chat", wa_link)
+st.link_button("Open WhatsApp", wa_link)
 
-# ========= FOOTER =========
 st.caption("Your information is confidential.")
