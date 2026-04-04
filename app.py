@@ -1,25 +1,25 @@
 import streamlit as st
 import urllib.parse
-import google.generativeai as genai
+import requests
 
 # ========= CONFIG =========
 WHATSAPP_NUMBER = "917395944527"
+API_KEY = st.secrets.get("GEMINI_API_KEY")
 
-# 🔐 API KEY FROM SECRETS (NOT IN CODE)
-genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+if not API_KEY:
+    st.error("API key not found in secrets")
+    st.stop()
 
-# ✅ Stable model + chat session
-model = genai.GenerativeModel("gemini-1.5-flash")
+URL = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={API_KEY}"
 
-# ========= PAGE =========
 st.set_page_config(page_title="Durga Psychiatric Centre")
 
 # ========= SESSION =========
-if "chat" not in st.session_state:
-    st.session_state.chat = model.start_chat(history=[])
-
 if "messages" not in st.session_state:
     st.session_state.messages = []
+
+if "history" not in st.session_state:
+    st.session_state.history = ""
 
 # ========= HEADER =========
 st.title("Durga Psychiatric Centre")
@@ -27,32 +27,43 @@ st.write("AI Mental Health Assistant")
 
 st.markdown("---")
 
-# ========= CHAT =========
-st.subheader("Talk to our AI Assistant")
-
+# ========= GEMINI FUNCTION =========
 def get_ai_reply(user_input):
     try:
-        prompt = f"""
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {
+                            "text": f"""
 You are a compassionate mental health assistant.
 
-Rules:
 - Be empathetic
-- Ask meaningful follow-up questions
-- Avoid repeating same sentences
-- Keep responses short (2-3 lines)
-- Encourage seeking professional help if needed
+- Ask specific follow-up questions
+- Avoid repeating sentences
+- Keep answers short
+
+Conversation:
+{st.session_state.history}
 
 User: {user_input}
 """
-        response = st.session_state.chat.send_message(prompt)
+                        }
+                    ]
+                }
+            ]
+        }
 
-        if response and hasattr(response, "text") and response.text:
-            return response.text.strip()
+        response = requests.post(URL, json=payload)
+
+        if response.status_code == 200:
+            data = response.json()
+            return data["candidates"][0]["content"]["parts"][0]["text"]
         else:
-            return "I'm here to listen. Can you tell me more?"
+            return f"❌ API ERROR: {response.status_code}"
 
     except Exception as e:
-        return "⚠️ AI service temporarily unavailable. Please try again."
+        return f"❌ ERROR: {e}"
 
 # ========= INPUT =========
 with st.form("chat_form", clear_on_submit=True):
@@ -60,38 +71,36 @@ with st.form("chat_form", clear_on_submit=True):
     submit = st.form_submit_button("Send")
 
 if submit and user_input:
-    st.session_state.messages.append(("You", user_input))
     reply = get_ai_reply(user_input)
+
+    st.session_state.messages.append(("You", user_input))
     st.session_state.messages.append(("Assistant", reply))
+
+    st.session_state.history += f"\nUser: {user_input}\nAssistant: {reply}"
+
     st.rerun()
 
 # ========= DISPLAY =========
 for role, msg in st.session_state.messages:
     st.write(f"**{role}:** {msg}")
 
-# ========= CONSULTATION =========
+# ========= FORM =========
 st.markdown("---")
 st.subheader("Book a Consultation")
 
 name = st.text_input("Name")
 phone = st.text_input("Phone Number")
-issue = st.selectbox(
-    "Concern",
-    ["Stress", "Anxiety", "Depression", "Relationship", "Addiction", "Other"]
-)
+issue = st.selectbox("Concern", ["Stress","Anxiety","Depression","Other"])
 
-# ========= WHATSAPP =========
-message = f"""Hello, I would like to book a consultation.
+message = f"""Hello, I need consultation.
 
 Name: {name}
 Phone: {phone}
 Concern: {issue}
 """
 
-encoded = urllib.parse.quote(message)
-wa_link = f"https://wa.me/{WHATSAPP_NUMBER}?text={encoded}"
+wa_link = f"https://wa.me/{WHATSAPP_NUMBER}?text={urllib.parse.quote(message)}"
 
 st.link_button("Open WhatsApp", wa_link)
 
-# ========= FOOTER =========
 st.caption("Your information is confidential.")
