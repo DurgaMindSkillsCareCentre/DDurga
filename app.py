@@ -3,29 +3,26 @@ import requests
 import urllib.parse
 
 # =========================
-# PAGE CONFIG
+# CONFIG
 # =========================
 st.set_page_config(page_title="Durga AI", layout="centered")
 
 # =========================
-# SAFE GRADIENT UI (NO BREAK)
+# GRADIENT UI (SAFE)
 # =========================
 st.markdown("""
 <style>
-/* App background */
 .stApp {
     background: linear-gradient(135deg, #4e54c8, #8f94fb);
     color: white;
 }
 
-/* Text inputs */
 textarea, input {
     background-color: #ffffff !important;
     color: black !important;
     border-radius: 10px !important;
 }
 
-/* Buttons */
 .stButton>button {
     background: linear-gradient(135deg, #000000, #434343);
     color: white;
@@ -34,12 +31,6 @@ textarea, input {
     padding: 10px 20px;
 }
 
-/* Cards look */
-.block-container {
-    padding-top: 2rem;
-}
-
-/* Section titles */
 h1, h2, h3 {
     color: white !important;
 }
@@ -49,7 +40,7 @@ h1, h2, h3 {
 # =========================
 # HEADER
 # =========================
-st.title("🧠 DURGA PSYCHIATRIC CENTRE")
+st.title(" DURGA PSYCHIATRIC CENTRE")
 
 # =========================
 # PROFILE
@@ -57,7 +48,7 @@ st.title("🧠 DURGA PSYCHIATRIC CENTRE")
 try:
     st.image("profile.jpg", width=180)
 except:
-    st.warning("Profile image not found")
+    st.warning("Upload profile.jpg")
 
 st.markdown("""
 **D.Durga**  
@@ -70,11 +61,10 @@ Durga Psychiatric Centre
 st.divider()
 
 # =========================
-# AI BACKENDS
+# AI FUNCTIONS
 # =========================
-
 def local_ai(q):
-    return "Your mind is overwhelmed. Slow down, breathe deeply, and take one small step at a time."
+    return "Slow down. Breathe gently. Take one small step�you are safe."
 
 def gemini_ai(q):
     key = st.secrets.get("GEMINI_API_KEY", "")
@@ -113,15 +103,11 @@ def web_ai(q):
         if res.get("AbstractText"):
             return res["AbstractText"]
 
-        return "Try relaxation, breathing exercises, and talking to someone you trust."
+        return None
     except:
         return None
 
-# =========================
-# SMART AI ROUTER
-# =========================
 def smart_ai(q):
-
     r = gemini_ai(q)
     if r:
         return r[:300]
@@ -137,14 +123,23 @@ def smart_ai(q):
     return local_ai(q)
 
 # =========================
-# CHAT
+# SESSION STATE INIT
 # =========================
-st.subheader("AI Mental Health Assistant")
-
 if "history" not in st.session_state:
     st.session_state.history = []
 
-user_input = st.text_area("Tell me what you're feeling:")
+if "input_text" not in st.session_state:
+    st.session_state.input_text = ""
+
+# =========================
+# CHAT UI
+# =========================
+st.subheader("AI Mental Health Assistant")
+
+user_input = st.text_area(
+    "Tell me what you're feeling:",
+    key="input_text"
+)
 
 if st.button("SEND"):
     if user_input.strip():
@@ -154,16 +149,14 @@ if st.button("SEND"):
         st.session_state.history.append(("You", user_input))
         st.session_state.history.append(("AI", answer))
 
-        # CLEAR INPUT (IMPORTANT FIX)
-        st.session_state["clear_input"] = True
+        #  CLEAR INPUT (CORRECT WAY)
+        st.session_state.input_text = ""
+
         st.rerun()
 
-# CLEAR TEXT BOX AFTER SEND
-if st.session_state.get("clear_input"):
-    st.session_state["clear_input"] = False
-    st.text_area("Tell me what you're feeling:", value="")
-
+# =========================
 # DISPLAY CHAT
+# =========================
 for role, msg in st.session_state.history:
     if role == "You":
         st.markdown(f"**You:** {msg}")
@@ -174,7 +167,7 @@ for role, msg in st.session_state.history:
 # CONSULT FORM
 # =========================
 st.divider()
-st.subheader("📞 Book Consultation")
+st.subheader(" Book Consultation")
 
 name = st.text_input("Name")
 phone = st.text_input("Mobile Number")
@@ -184,7 +177,6 @@ concern = st.selectbox(
 )
 
 if st.button("Submit"):
-
     if name and phone:
         message = urllib.parse.quote(
             f"Name: {name}\nPhone: {phone}\nConcern: {concern}"
@@ -192,8 +184,7 @@ if st.button("Submit"):
 
         whatsapp_url = f"https://wa.me/917395944527?text={message}"
 
-        st.success("Click below to continue")
-
-        st.markdown(f"[👉 Open WhatsApp]( {whatsapp_url} )")
+        st.success("Click below to open WhatsApp")
+        st.markdown(f"[ Open WhatsApp]({whatsapp_url})")
     else:
-        st.warning("Please fill all fields")
+        st.warning("Please fill all details")
