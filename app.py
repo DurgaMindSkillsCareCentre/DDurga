@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 import urllib.parse
-import time
+import random
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
@@ -9,12 +9,7 @@ from urllib3.util.retry import Retry
 API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 WHATSAPP_NUMBER = "917395944527"
 
-PRIMARY_MODEL = "models/gemini-2.0-flash"
-FALLBACK_MODELS = [
-    "models/gemini-2.0-flash-001",
-    "models/gemini-flash-latest",
-    "models/gemini-1.5-flash"
-]
+MODEL = "models/gemini-2.0-flash"
 
 # ================= PAGE =================
 st.set_page_config(page_title="Durga Psychiatric Centre", layout="centered")
@@ -22,86 +17,104 @@ st.set_page_config(page_title="Durga Psychiatric Centre", layout="centered")
 st.markdown("# 🏥 DURGA PSYCHIATRIC CENTRE")
 st.markdown("## 🧠 AI Mental Health Assistant")
 
-# ================= SAFE SESSION =================
+# ================= SESSION =================
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# ================= HTTP SESSION WITH RETRY =================
-def build_session():
-    session = requests.Session()
-    retries = Retry(
-        total=2,                # small retry to avoid delays
-        backoff_factor=0.5,     # quick retry
-        status_forcelist=[429, 500, 502, 503, 504],
-        allowed_methods=["POST"]
-    )
+# ================= OFFLINE AI =================
+def offline_response(text):
+
+    text = text.lower()
+
+    responses = {
+        "stress": [
+            "It sounds like you're under a lot of pressure. Try taking a few slow breaths and focus on one small task at a time.",
+            "Stress can feel overwhelming. A short break and deep breathing can help calm your mind."
+        ],
+        "anxiety": [
+            "Anxiety often comes with racing thoughts. Try grounding yourself by noticing 5 things around you.",
+            "You're not alone. Slow breathing can reduce anxiety quickly."
+        ],
+        "anger": [
+            "Anger is natural. Pause, step away, and allow yourself time before reacting.",
+            "Take a deep breath. Responding calmly is more powerful than reacting instantly."
+        ],
+        "depression": [
+            "I'm sorry you're feeling this way. Even small steps like talking to someone can help.",
+            "You matter. Try doing one small positive activity today."
+        ],
+        "default": [
+            "I'm here for you. Can you tell me a bit more about what you're experiencing?",
+            "That sounds important. I'm listening."
+        ]
+    }
+
+    for key in responses:
+        if key in text:
+            return random.choice(responses[key])
+
+    return random.choice(responses["default"])
+
+
+# ================= HTTP SESSION =================
+def get_session():
+    s = requests.Session()
+    retries = Retry(total=1, backoff_factor=0.3)
     adapter = HTTPAdapter(max_retries=retries)
-    session.mount("https://", adapter)
-    session.mount("http://", adapter)
-    return session
+    s.mount("https://", adapter)
+    return s
 
-HTTP = build_session()
+HTTP = get_session()
 
-# ================= CORE CALL =================
-def call_model(model, prompt):
+# ================= ONLINE AI =================
+def online_response(prompt):
+
     if not API_KEY:
         return None
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/{model}:generateContent?key={API_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/{MODEL}:generateContent?key={API_KEY}"
 
     payload = {
         "contents": [
             {
                 "parts": [
-                    {"text": f"You are a calm psychologist. Give short helpful advice.\nUser: {prompt}"}
+                    {"text": f"You are a psychologist. Give short helpful advice.\nUser: {prompt}"}
                 ]
             }
         ]
     }
 
     try:
-        # 🔥 split timeout (connect, read)
-        res = HTTP.post(url, json=payload, timeout=(3, 10))
+        res = HTTP.post(url, json=payload, timeout=(2, 6))
 
-        if res.status_code != 200:
-            return None
-
-        data = res.json()
-
-        # 🛡️ SAFE PARSING
-        if "candidates" in data:
+        if res.status_code == 200:
+            data = res.json()
             return data["candidates"][0]["content"]["parts"][0]["text"]
 
-    except Exception:
+    except:
         return None
 
     return None
 
 
-# ================= AI ENGINE =================
-def ask_ai(prompt):
+# ================= SMART AI =================
+def smart_ai(prompt):
 
-    # ⚡ primary (fast)
-    result = call_model(PRIMARY_MODEL, prompt)
-    if result:
-        return result
+    # ⚡ INSTANT response first
+    instant = offline_response(prompt)
 
-    # 🔁 quick retry same model
-    result = call_model(PRIMARY_MODEL, prompt)
-    if result:
-        return result
+    # 🔁 Try improving with real AI (non-blocking feel)
+    api_reply = online_response(prompt)
 
-    # 🔁 fallback models
-    for model in FALLBACK_MODELS:
-        result = call_model(model, prompt)
-        if result:
-            return result
+    if api_reply:
+        return api_reply  # better answer
 
-    return "⚠️ AI is busy right now. Please try again in a few seconds."
+    return instant  # fallback instantly
 
 
 # ================= CHAT =================
 with st.form("chat_form", clear_on_submit=True):
+
     user_input = st.text_area(
         "Tell me what you're feeling:",
         placeholder="Example: I feel stressed due to work pressure"
@@ -110,13 +123,11 @@ with st.form("chat_form", clear_on_submit=True):
     send = st.form_submit_button("Send")
 
     if send and user_input.strip():
+
         st.session_state.messages.append(("You", user_input))
 
-        try:
-            with st.spinner("Thinking..."):
-                reply = ask_ai(user_input)
-        except Exception:
-            reply = "⚠️ Temporary issue. Please try again."
+        # ⚡ instant response
+        reply = smart_ai(user_input)
 
         st.session_state.messages.append(("Assistant", reply))
 
@@ -124,6 +135,7 @@ with st.form("chat_form", clear_on_submit=True):
 # ================= DISPLAY =================
 for role, msg in st.session_state.messages:
     st.markdown(f"**{role}:** {msg}")
+
 
 # ================= BOOKING =================
 st.markdown("---")
@@ -139,6 +151,7 @@ concern = st.selectbox(
 
 # ================= WHATSAPP =================
 if name and phone:
+
     message = f"""Hello Durga Psychiatric Centre,
 
 New Consultation Request:
@@ -163,7 +176,6 @@ Please contact me."""
             font-size:18px;
             font-weight:bold;
             color:white;
-            margin-top:10px;
         ">
         💬 Book via WhatsApp
         </div>
@@ -171,5 +183,6 @@ Please contact me."""
         """,
         unsafe_allow_html=True
     )
+
 else:
     st.info("Fill details to enable WhatsApp booking")
