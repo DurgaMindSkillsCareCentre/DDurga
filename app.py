@@ -1,16 +1,14 @@
 import streamlit as st
 import requests
 import urllib.parse
+import random
 
 # ================= CONFIG =================
 API_KEY = st.secrets.get("GEMINI_API_KEY", "")
+MODEL = "models/gemini-2.0-flash"
 WHATSAPP_NUMBER = "917395944527"
 
-# 🔥 ONLY USE THIS MODEL (CONFIRMED WORKING)
-MODEL = "models/gemini-2.0-flash"
-
-# ================= PAGE =================
-st.set_page_config(page_title="Durga Psychiatric Centre", layout="centered")
+st.set_page_config(page_title="Durga Psychiatric Centre")
 
 st.title("🏥 DURGA PSYCHIATRIC CENTRE")
 st.subheader("🧠 AI Mental Health Assistant")
@@ -19,77 +17,130 @@ st.subheader("🧠 AI Mental Health Assistant")
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# ================= OFFLINE =================
-def offline_response(text):
+if "quota_exceeded" not in st.session_state:
+    st.session_state.quota_exceeded = False
+
+# ================= SMART NLP ENGINE =================
+def detect_emotion(text):
     text = text.lower()
 
-    if "sleep" in text:
-        return "Sleep issues are often linked to stress. Try avoiding screens before bed and practice slow breathing."
+    if any(w in text for w in ["stress", "pressure", "deadline"]):
+        return "stress"
 
-    if "stress" in text:
-        return "Stress can feel overwhelming. Break tasks into small steps and take mindful pauses."
+    if any(w in text for w in ["sleep", "insomnia", "night"]):
+        return "sleep"
 
-    if "anxiety" in text:
-        return "Try grounding yourself—focus on your breath and surroundings."
+    if any(w in text for w in ["anxiety", "fear", "worry"]):
+        return "anxiety"
 
-    return "I'm here for you. Tell me more."
+    if any(w in text for w in ["anger", "angry", "irritated"]):
+        return "anger"
 
-# ================= GEMINI =================
-def gemini_response(prompt):
+    if any(w in text for w in ["sad", "depressed", "lonely"]):
+        return "depression"
+
+    return "general"
+
+# ================= DYNAMIC RESPONSES =================
+responses = {
+    "stress": [
+        "You're under pressure. Let's slow things down—focus on one small task at a time.",
+        "Stress can build quickly. Try deep breathing for 2 minutes and reset your focus.",
+        "Break your workload into smaller steps. You don’t need to do everything at once."
+    ],
+    "sleep": [
+        "Sleep issues often come from mental overload. Reduce screen time before bed.",
+        "Try slow breathing: inhale 4 sec, hold 4 sec, exhale 6 sec.",
+        "Keep your phone away at night and relax your mind before sleep."
+    ],
+    "anxiety": [
+        "Anxiety comes from future thinking. Bring your focus to the present moment.",
+        "Try grounding: name 5 things you see, 4 things you feel.",
+        "Slow breathing can reduce anxiety significantly."
+    ],
+    "anger": [
+        "Pause before reacting. Take a deep breath.",
+        "Anger is intense but temporary. Give yourself space before responding.",
+        "Step away for a moment—this reduces emotional intensity."
+    ],
+    "depression": [
+        "You're not alone. Even small steps matter.",
+        "Try doing one simple positive activity today.",
+        "Talk to someone you trust. Sharing helps."
+    ],
+    "general": [
+        "I'm here to support you. Tell me more.",
+        "You're safe to express your thoughts here.",
+        "Let's work through this together."
+    ]
+}
+
+def smart_offline_ai(user_input):
+    emotion = detect_emotion(user_input)
+    return random.choice(responses[emotion])
+
+# ================= GEMINI CALL =================
+def call_gemini(prompt):
 
     if not API_KEY:
-        st.warning("⚠️ API KEY MISSING")
         return None
 
     url = f"https://generativelanguage.googleapis.com/v1beta/{MODEL}:generateContent?key={API_KEY}"
 
     payload = {
         "contents": [
-            {
-                "parts": [
-                    {"text": f"You are a psychologist. Give helpful advice.\nUser: {prompt}"}
-                ]
-            }
+            {"parts": [{"text": prompt}]}
         ]
     }
 
     try:
-        res = requests.post(url, json=payload, timeout=20)
+        res = requests.post(url, json=payload, timeout=8)
 
-        # 🔍 DEBUG INFO (REMOVE LATER)
-        st.write("Status Code:", res.status_code)
+        if res.status_code == 429:
+            st.session_state.quota_exceeded = True
+            return None
 
         if res.status_code != 200:
-            st.write("Error:", res.text)
             return None
 
         data = res.json()
+        return data["candidates"][0]["content"]["parts"][0]["text"]
 
-        if "candidates" in data:
-            return data["candidates"][0]["content"]["parts"][0]["text"]
-
-        st.write("Invalid response:", data)
-
-    except Exception as e:
-        st.write("Exception:", str(e))
+    except:
         return None
 
-    return None
+# ================= SMART AI CORE =================
+def smart_ai(user_input):
 
-# ================= SMART AI =================
-def smart_ai(prompt):
+    # Build context (last 3 messages)
+    history = ""
+    for role, msg in st.session_state.messages[-6:]:
+        history += f"{role}: {msg}\n"
 
-    with st.spinner("Thinking..."):
+    prompt = f"""
+You are a calm, supportive mental health assistant.
 
-        ai = gemini_response(prompt)
+Conversation:
+{history}
 
-    if ai:
-        return ai  # ✅ REAL AI
+User: {user_input}
 
-    return offline_response(prompt)  # ⚠ fallback
+Give a helpful, short, empathetic response.
+"""
 
-# ================= CHAT =================
-with st.form("chat", clear_on_submit=True):
+    # 🚀 Try Gemini only if available
+    if not st.session_state.quota_exceeded:
+        with st.spinner("Thinking..."):
+            response = call_gemini(prompt)
+
+        if response:
+            return response
+
+    # ⚡ Instant fallback
+    return smart_offline_ai(user_input)
+
+# ================= CHAT UI =================
+with st.form("chat_form", clear_on_submit=True):
 
     user_input = st.text_area("Tell me what you're feeling:")
 
@@ -109,16 +160,17 @@ for role, msg in st.session_state.messages:
 
 # ================= WHATSAPP =================
 st.markdown("---")
+st.subheader("📞 Book a Consultation")
 
 name = st.text_input("Name")
 phone = st.text_input("Phone Number")
 
 if name and phone:
-    msg = f"Name: {name}\nPhone: {phone}"
-    link = f"https://wa.me/{WHATSAPP_NUMBER}?text={urllib.parse.quote(msg)}"
+    message = f"Name: {name}\nPhone: {phone}"
+    link = f"https://wa.me/{WHATSAPP_NUMBER}?text={urllib.parse.quote(message)}"
 
     st.markdown(
         f'<a href="{link}" target="_blank">'
-        f'<button style="background:#25D366;color:white;padding:12px;border:none;border-radius:8px;">Chat on WhatsApp</button></a>',
+        f'<button style="background:#25D366;color:white;padding:14px;border:none;border-radius:10px;font-size:16px;">Chat on WhatsApp</button></a>',
         unsafe_allow_html=True
     )
