@@ -3,170 +3,94 @@ import requests
 import urllib.parse
 
 # ================= CONFIG =================
-API_KEY = st.secrets.get("GEMINI_API_KEY", "")
-MODEL = "models/gemini-2.0-flash"
+GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
+DEEPSEEK_API_KEY = st.secrets.get("DEEPSEEK_API_KEY", "")
+
 WHATSAPP_NUMBER = "917395944527"
 
 st.set_page_config(page_title="Durga Psychiatric Centre", layout="centered")
 
-# ================= ULTRA PREMIUM UI =================
+# ================= UI =================
 st.markdown("""
 <style>
-
-/* ===== BACKGROUND (iOS Gradient) ===== */
 .stApp {
-    background: linear-gradient(180deg, #4facfe 0%, #8e44ad 100%);
+    background: linear-gradient(180deg, #4facfe, #8e44ad);
     color: white;
 }
-
-/* ===== GLASS CARD ===== */
 .card {
     background: rgba(255,255,255,0.12);
-    backdrop-filter: blur(18px);
-    border-radius: 22px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+    backdrop-filter: blur(16px);
+    padding: 18px;
+    border-radius: 18px;
+    margin-bottom: 15px;
 }
-
-/* ===== HEADINGS ===== */
-h1, h2, h3 {
-    color: white !important;
-    font-weight: 700;
-}
-
-/* ===== LABEL TEXT ===== */
-label, p {
-    color: #f2f2f2 !important;
-}
-
-/* ===== INPUT ===== */
 input, textarea {
     background: white !important;
     color: black !important;
-    border-radius: 14px !important;
-    border: none !important;
-    padding: 12px !important;
+    border-radius: 12px !important;
 }
-
-/* ===== DROPDOWN ===== */
-.stSelectbox div {
-    background: white !important;
-    color: black !important;
-    border-radius: 14px !important;
-}
-
-/* ===== SEND BUTTON ===== */
-.stForm button {
-    background: linear-gradient(135deg, #ff7a18, #ff3d00) !important;
-    color: white !important;
-    border-radius: 14px !important;
-    height: 48px;
-    font-weight: bold;
-}
-
-/* ===== WHATSAPP BUTTON ===== */
 .stButton button {
-    background: linear-gradient(135deg, #25D366, #128C7E) !important;
-    color: white !important;
-    border-radius: 16px !important;
-    height: 52px;
-    font-size: 18px;
-    font-weight: bold;
+    background: linear-gradient(135deg,#25D366,#128C7E);
+    color:white;
+    font-weight:bold;
+    border-radius:12px;
+    height:50px;
 }
-
-/* ===== CHAT BUBBLES ===== */
-.chat-user {
-    background: #ffffff;
-    color: black;
-    padding: 12px;
-    border-radius: 18px;
-    margin: 8px 0;
-    text-align: right;
-}
-
-.chat-ai {
-    background: rgba(255,255,255,0.2);
-    padding: 12px;
-    border-radius: 18px;
-    margin: 8px 0;
-}
-
-/* ===== PROFILE CARD ===== */
-.profile {
-    background: linear-gradient(135deg, #ff9a9e, #fad0c4);
-    padding: 15px;
-    border-radius: 16px;
-    color: black;
-}
-
-/* ===== SUCCESS ===== */
-.stAlert {
-    color: white !important;
-}
-
 </style>
 """, unsafe_allow_html=True)
 
-# ================= HEADER =================
-st.markdown("<h1 style='text-align:center;'>🏥 DURGA PSYCHIATRIC CENTRE</h1>", unsafe_allow_html=True)
+st.title("🏥 DURGA PSYCHIATRIC CENTRE")
 
-# ================= PROFILE =================
-st.markdown('<div class="card">', unsafe_allow_html=True)
-
-col1, col2 = st.columns([1,2])
-
-with col1:
-    st.image("uploaded_image.jpg", width=130)
-
-with col2:
-    st.markdown("""
-    <div class="profile">
-    <b>👩‍⚕️ D. DURGA</b><br>
-    DPN (Nursing), DAHM, BBA, MBA (HR), MSW<br><br>
-    Founder & CEO<br>
-    Durga Psychiatric Centre
-    </div>
-    """, unsafe_allow_html=True)
-
-st.markdown('</div>', unsafe_allow_html=True)
-
-# ================= AI =================
-st.markdown('<div class="card">', unsafe_allow_html=True)
-
-st.subheader("🧠 AI Mental Health Assistant")
-
+# ================= SESSION =================
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
 if "quota_exceeded" not in st.session_state:
     st.session_state.quota_exceeded = False
 
-
-def offline_ai(text):
+# ================= QUERY CLASSIFIER =================
+def classify_query(text):
     text = text.lower()
+
+    if len(text.split()) < 5:
+        return "simple"
+
+    if any(w in text for w in ["why", "how", "explain", "reason"]):
+        return "complex"
+
+    return "medium"
+
+# ================= LOCAL AI =================
+def local_ai(text):
+    text = text.lower()
+
     if "stress" in text:
-        return "Break work into small steps. Take mindful pauses."
-    if "sleep" in text:
-        return "Reduce screen time. Try slow breathing before sleep."
+        return "Take small steps. Breathe slowly and focus on one task."
+
     if "anxiety" in text:
-        return "Focus on breathing and grounding."
-    if "anger" in text:
-        return "Pause. Take deep breaths before reacting."
-    return "I'm here to support you."
+        return "Try grounding: focus on your breath and surroundings."
 
+    if "sleep" in text:
+        return "Avoid screens before sleep and relax your mind."
 
+    if "depression" in text:
+        return "You’re not alone. Try small positive actions today."
+
+    return "I'm here to support you. Tell me more."
+
+# ================= GEMINI =================
 def call_gemini(prompt):
-    if not API_KEY:
+
+    if not GEMINI_API_KEY:
         return None
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/{MODEL}:generateContent?key={API_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
 
     try:
         res = requests.post(
             url,
             json={"contents":[{"parts":[{"text":prompt}]}]},
-            timeout=6
+            timeout=8
         )
 
         if res.status_code == 429:
@@ -176,23 +100,80 @@ def call_gemini(prompt):
         if res.status_code != 200:
             return None
 
-        data = res.json()
-        return data["candidates"][0]["content"]["parts"][0]["text"]
+        return res.json()["candidates"][0]["content"]["parts"][0]["text"]
 
     except:
         return None
 
+# ================= DEEPSEEK =================
+def call_deepseek(prompt):
 
+    if not DEEPSEEK_API_KEY:
+        return None
+
+    url = "https://api.deepseek.com/v1/chat/completions"
+
+    headers = {
+        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "model": "deepseek-chat",
+        "messages": [
+            {"role": "user", "content": prompt}
+        ]
+    }
+
+    try:
+        res = requests.post(url, headers=headers, json=payload, timeout=8)
+
+        if res.status_code == 200:
+            return res.json()["choices"][0]["message"]["content"]
+
+    except:
+        return None
+
+    return None
+
+# ================= SMART AI =================
 def smart_ai(user_input):
-    if not st.session_state.quota_exceeded:
-        with st.spinner("Thinking..."):
-            r = call_gemini(user_input)
+
+    intent = classify_query(user_input)
+
+    # SIMPLE → LOCAL
+    if intent == "simple":
+        return local_ai(user_input)
+
+    # MEDIUM → GEMINI
+    if intent == "medium":
+        if not st.session_state.quota_exceeded:
+            with st.spinner("Thinking..."):
+                r = call_gemini(user_input)
+            if r:
+                return r
+
+    # COMPLEX → DEEPSEEK
+    if intent == "complex":
+        r = call_deepseek(user_input)
         if r:
             return r
-    return offline_ai(user_input)
 
+    # FALLBACK ORDER
+    r = call_deepseek(user_input)
+    if r:
+        return r
 
-# ================= CHAT INPUT =================
+    if not st.session_state.quota_exceeded:
+        r = call_gemini(user_input)
+        if r:
+            return r
+
+    return local_ai(user_input)
+
+# ================= CHAT =================
+st.markdown("### 🧠 AI Mental Health Assistant")
+
 with st.form("chat_form", clear_on_submit=True):
 
     user_input = st.text_area("Tell me what you're feeling:")
@@ -200,31 +181,24 @@ with st.form("chat_form", clear_on_submit=True):
     send = st.form_submit_button("Send")
 
     if send and user_input.strip():
-        st.session_state.messages.append(("user", user_input))
+        st.session_state.messages.append(("You", user_input))
         reply = smart_ai(user_input)
-        st.session_state.messages.append(("ai", reply))
+        st.session_state.messages.append(("AI", reply))
 
-
-# ================= CHAT DISPLAY =================
+# ================= DISPLAY =================
 for role, msg in st.session_state.messages:
-    if role == "user":
-        st.markdown(f'<div class="chat-user">{msg}</div>', unsafe_allow_html=True)
-    else:
-        st.markdown(f'<div class="chat-ai">{msg}</div>', unsafe_allow_html=True)
-
-st.markdown('</div>', unsafe_allow_html=True)
+    st.write(f"**{role}:** {msg}")
 
 # ================= CONSULT =================
-st.markdown('<div class="card">', unsafe_allow_html=True)
-
+st.markdown("---")
 st.subheader("📞 Book Consultation")
 
 name = st.text_input("Name")
-phone = st.text_input("Phone Number")
+phone = st.text_input("Phone")
 
 cause = st.selectbox(
-    "Select Concern",
-    ["Stress", "Anxiety", "Depression", "Sleep Issue", "Relationship", "Other"]
+    "Concern",
+    ["Stress","Anxiety","Depression","Sleep Issue","Relationship","Other"]
 )
 
 if st.button("Submit & Continue"):
@@ -251,15 +225,7 @@ Concern: {cause}
         st.markdown(
             f"""
             <a href="{link}" target="_blank">
-                <button style="
-                    background:linear-gradient(135deg,#25D366,#128C7E);
-                    color:white;
-                    padding:16px;
-                    border:none;
-                    border-radius:16px;
-                    font-size:18px;
-                    width:100%;
-                ">
+                <button style="width:100%;padding:14px;background:#25D366;color:white;border:none;border-radius:10px;">
                 💬 Open WhatsApp
                 </button>
             </a>
@@ -269,5 +235,3 @@ Concern: {cause}
 
     else:
         st.error("Please fill all fields")
-
-st.markdown('</div>', unsafe_allow_html=True)
