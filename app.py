@@ -7,10 +7,11 @@ import urllib.parse
 # =========================
 st.set_page_config(page_title="Durga AI", layout="centered")
 
-SERPER_API_KEY = "YOUR_SERPER_API_KEY_HERE"
+SERPER_API_KEY = "YOUR_SERPER_KEY"
+GEMINI_API_KEY = "YOUR_GEMINI_KEY"
 
 # =========================
-# SAFE PREMIUM UI
+# UI
 # =========================
 st.markdown("""
 <style>
@@ -32,7 +33,7 @@ textarea, input {
     font-weight: bold;
 }
 
-/* WhatsApp Button */
+/* WhatsApp */
 .whatsapp-btn {
     display:block;
     text-align:center;
@@ -43,7 +44,6 @@ textarea, input {
     border-radius:12px;
     text-decoration:none;
     font-weight:bold;
-    margin-top:10px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -69,60 +69,125 @@ Durga Psychiatric Centre
 st.divider()
 
 # =========================
-# AI FUNCTIONS
+# UTILS
 # =========================
 def summarize(text):
-    sentences = text.split(".")
-    clean = [s.strip() for s in sentences if len(s.strip()) > 20]
-    return ". ".join(clean[:3]) + "."
+    parts = text.split(".")
+    clean = [p.strip() for p in parts if len(p.strip()) > 25]
+    return ". ".join(clean[:3]) + "." if clean else None
 
-def serper_search(query):
+# =========================
+# SERPER (GOOGLE)
+# =========================
+def serper_ai(q):
     try:
         url = "https://google.serper.dev/search"
         headers = {
             "X-API-KEY": SERPER_API_KEY,
             "Content-Type": "application/json"
         }
-        payload = {"q": query}
+        res = requests.post(url, headers=headers, json={"q": q}, timeout=8)
 
-        res = requests.post(url, headers=headers, json=payload, timeout=8)
-        data = res.json()
-
-        if "organic" not in data:
+        if res.status_code != 200:
             return None
 
+        data = res.json()
+
         snippets = []
-        for item in data["organic"][:3]:
+        for item in data.get("organic", [])[:3]:
             if "snippet" in item:
                 snippets.append(item["snippet"])
 
         if not snippets:
             return None
 
-        combined = " ".join(snippets)
-        return summarize(combined)
+        return summarize(" ".join(snippets))
 
     except:
         return None
 
+# =========================
+# WIKIPEDIA (VERY RELIABLE)
+# =========================
+def wiki_ai(q):
+    try:
+        url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(q)}"
+        res = requests.get(url, timeout=5)
+
+        if res.status_code != 200:
+            return None
+
+        data = res.json()
+
+        return summarize(data.get("extract", ""))
+
+    except:
+        return None
+
+# =========================
+# DUCKDUCKGO
+# =========================
+def duck_ai(q):
+    try:
+        url = "https://api.duckduckgo.com/"
+        res = requests.get(url, params={"q": q, "format": "json"}, timeout=5)
+
+        data = res.json()
+
+        return summarize(data.get("AbstractText", ""))
+
+    except:
+        return None
+
+# =========================
+# GEMINI
+# =========================
+def gemini_ai(q):
+    try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
+
+        payload = {
+            "contents": [{"parts": [{"text": q}]}]
+        }
+
+        res = requests.post(url, json=payload, timeout=8)
+
+        data = res.json()
+
+        text = data["candidates"][0]["content"]["parts"][0]["text"]
+
+        return summarize(text)
+
+    except:
+        return None
+
+# =========================
+# LOCAL AI
+# =========================
 def local_ai(q):
     q = q.lower()
 
     if "sleep" in q or "insomnia" in q:
-        return "Insomnia is difficulty sleeping due to stress or irregular routine. Maintain fixed sleep time and reduce screen use before bed."
-    
+        return "Insomnia is difficulty sleeping due to stress or irregular routine. Maintain consistent sleep schedule and avoid screens."
+
     if "anxiety" in q:
-        return "Anxiety is excessive worry without real danger. It activates the body stress response. Breathing and relaxation help control it."
-    
+        return "Anxiety is excessive worry without danger. It triggers stress response. Breathing and relaxation techniques help control it."
+
     if "depress" in q:
-        return "Depression is persistent sadness, low energy, and loss of interest. Early support, routine, and professional help improve recovery."
+        return "Depression is persistent sadness and low energy. Early support, routine, and therapy help recovery."
 
     return "Take a slow breath. Focus on one step at a time. You are safe."
 
+# =========================
+# SMART ROUTER
+# =========================
 def smart_ai(q):
-    result = serper_search(q)
-    if result:
-        return result
+
+    for func in [serper_ai, wiki_ai, duck_ai, gemini_ai]:
+        result = func(q)
+        if result:
+            return result
+
     return local_ai(q)
 
 # =========================
@@ -135,7 +200,7 @@ if "user_input" not in st.session_state:
     st.session_state.user_input = ""
 
 # =========================
-# SEND FUNCTION
+# SEND
 # =========================
 def handle_send():
     q = st.session_state.user_input.strip()
@@ -159,14 +224,14 @@ st.text_area("Tell me what you're feeling", key="user_input")
 st.button("SEND", on_click=handle_send)
 
 # =========================
-# CHAT DISPLAY (ISOLATED)
+# CHAT
 # =========================
 with st.container():
     for role, msg in st.session_state.history:
         st.write(f"**{role}:** {msg}")
 
 # =========================
-# SPACE FIX (IMPORTANT)
+# SPACE FIX
 # =========================
 st.markdown("<br><br><br>", unsafe_allow_html=True)
 st.divider()
