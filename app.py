@@ -9,54 +9,100 @@ WHATSAPP_NUMBER = "917395944527"
 
 st.set_page_config(page_title="Durga Psychiatric Centre", layout="centered")
 
-# ================= PREMIUM UI =================
+# ================= ULTRA PREMIUM UI =================
 st.markdown("""
 <style>
 
-/* BACKGROUND GRADIENT */
+/* ===== BACKGROUND (iOS Gradient) ===== */
 .stApp {
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    background: linear-gradient(180deg, #4facfe 0%, #8e44ad 100%);
     color: white;
 }
 
-/* MAIN CARD */
-.main-card {
-    background: rgba(255,255,255,0.1);
-    backdrop-filter: blur(12px);
+/* ===== GLASS CARD ===== */
+.card {
+    background: rgba(255,255,255,0.12);
+    backdrop-filter: blur(18px);
+    border-radius: 22px;
     padding: 20px;
-    border-radius: 20px;
     margin-bottom: 20px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.25);
 }
 
-/* PROFILE CARD */
-.profile-card {
+/* ===== HEADINGS ===== */
+h1, h2, h3 {
+    color: white !important;
+    font-weight: 700;
+}
+
+/* ===== LABEL TEXT ===== */
+label, p {
+    color: #f2f2f2 !important;
+}
+
+/* ===== INPUT ===== */
+input, textarea {
+    background: white !important;
+    color: black !important;
+    border-radius: 14px !important;
+    border: none !important;
+    padding: 12px !important;
+}
+
+/* ===== DROPDOWN ===== */
+.stSelectbox div {
+    background: white !important;
+    color: black !important;
+    border-radius: 14px !important;
+}
+
+/* ===== SEND BUTTON ===== */
+.stForm button {
+    background: linear-gradient(135deg, #ff7a18, #ff3d00) !important;
+    color: white !important;
+    border-radius: 14px !important;
+    height: 48px;
+    font-weight: bold;
+}
+
+/* ===== WHATSAPP BUTTON ===== */
+.stButton button {
+    background: linear-gradient(135deg, #25D366, #128C7E) !important;
+    color: white !important;
+    border-radius: 16px !important;
+    height: 52px;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+/* ===== CHAT BUBBLES ===== */
+.chat-user {
+    background: #ffffff;
+    color: black;
+    padding: 12px;
+    border-radius: 18px;
+    margin: 8px 0;
+    text-align: right;
+}
+
+.chat-ai {
+    background: rgba(255,255,255,0.2);
+    padding: 12px;
+    border-radius: 18px;
+    margin: 8px 0;
+}
+
+/* ===== PROFILE CARD ===== */
+.profile {
     background: linear-gradient(135deg, #ff9a9e, #fad0c4);
     padding: 15px;
-    border-radius: 15px;
+    border-radius: 16px;
     color: black;
 }
 
-/* BUTTON */
-.stButton button {
-    background: linear-gradient(135deg, #25D366, #128C7E);
-    color: white;
-    border-radius: 12px;
-    height: 50px;
-    width: 100%;
-    font-size: 18px;
-    font-weight: bold;
-    border: none;
-}
-
-/* INPUT BOX */
-input, textarea {
-    border-radius: 10px !important;
-}
-
-/* HEADINGS */
-h1 {
-    font-weight: 800;
+/* ===== SUCCESS ===== */
+.stAlert {
+    color: white !important;
 }
 
 </style>
@@ -66,18 +112,18 @@ h1 {
 st.markdown("<h1 style='text-align:center;'>🏥 DURGA PSYCHIATRIC CENTRE</h1>", unsafe_allow_html=True)
 
 # ================= PROFILE =================
-st.markdown('<div class="main-card">', unsafe_allow_html=True)
+st.markdown('<div class="card">', unsafe_allow_html=True)
 
 col1, col2 = st.columns([1,2])
 
 with col1:
-    st.image("uploaded_image.jpg", width=140)
+    st.image("uploaded_image.jpg", width=130)
 
 with col2:
     st.markdown("""
-    <div class="profile-card">
-    <h3>👩‍⚕️ D. DURGA</h3>
-    <b>DPN (Nursing), DAHM, BBA, MBA (HR), MSW</b><br><br>
+    <div class="profile">
+    <b>👩‍⚕️ D. DURGA</b><br>
+    DPN (Nursing), DAHM, BBA, MBA (HR), MSW<br><br>
     Founder & CEO<br>
     Durga Psychiatric Centre
     </div>
@@ -86,7 +132,7 @@ with col2:
 st.markdown('</div>', unsafe_allow_html=True)
 
 # ================= AI =================
-st.markdown('<div class="main-card">', unsafe_allow_html=True)
+st.markdown('<div class="card">', unsafe_allow_html=True)
 
 st.subheader("🧠 AI Mental Health Assistant")
 
@@ -99,19 +145,14 @@ if "quota_exceeded" not in st.session_state:
 
 def offline_ai(text):
     text = text.lower()
-
     if "stress" in text:
         return "Break work into small steps. Take mindful pauses."
-
     if "sleep" in text:
-        return "Reduce screen time and practice breathing before sleep."
-
+        return "Reduce screen time. Try slow breathing before sleep."
     if "anxiety" in text:
-        return "Try grounding techniques and slow breathing."
-
+        return "Focus on breathing and grounding."
     if "anger" in text:
         return "Pause. Take deep breaths before reacting."
-
     return "I'm here to support you."
 
 
@@ -121,12 +162,12 @@ def call_gemini(prompt):
 
     url = f"https://generativelanguage.googleapis.com/v1beta/{MODEL}:generateContent?key={API_KEY}"
 
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}]
-    }
-
     try:
-        res = requests.post(url, json=payload, timeout=8)
+        res = requests.post(
+            url,
+            json={"contents":[{"parts":[{"text":prompt}]}]},
+            timeout=6
+        )
 
         if res.status_code == 429:
             st.session_state.quota_exceeded = True
@@ -145,14 +186,13 @@ def call_gemini(prompt):
 def smart_ai(user_input):
     if not st.session_state.quota_exceeded:
         with st.spinner("Thinking..."):
-            response = call_gemini(user_input)
-        if response:
-            return response
-
+            r = call_gemini(user_input)
+        if r:
+            return r
     return offline_ai(user_input)
 
 
-# ================= CHAT =================
+# ================= CHAT INPUT =================
 with st.form("chat_form", clear_on_submit=True):
 
     user_input = st.text_area("Tell me what you're feeling:")
@@ -160,18 +200,22 @@ with st.form("chat_form", clear_on_submit=True):
     send = st.form_submit_button("Send")
 
     if send and user_input.strip():
-        st.session_state.messages.append(("You", user_input))
+        st.session_state.messages.append(("user", user_input))
         reply = smart_ai(user_input)
-        st.session_state.messages.append(("Assistant", reply))
+        st.session_state.messages.append(("ai", reply))
 
 
+# ================= CHAT DISPLAY =================
 for role, msg in st.session_state.messages:
-    st.write(f"**{role}:** {msg}")
+    if role == "user":
+        st.markdown(f'<div class="chat-user">{msg}</div>', unsafe_allow_html=True)
+    else:
+        st.markdown(f'<div class="chat-ai">{msg}</div>', unsafe_allow_html=True)
 
 st.markdown('</div>', unsafe_allow_html=True)
 
 # ================= CONSULT =================
-st.markdown('<div class="main-card">', unsafe_allow_html=True)
+st.markdown('<div class="card">', unsafe_allow_html=True)
 
 st.subheader("📞 Book Consultation")
 
@@ -195,6 +239,7 @@ Concern: {cause}
 
         link = f"https://wa.me/{WHATSAPP_NUMBER}?text={urllib.parse.quote(msg)}"
 
+        # AUTO OPEN
         st.markdown(
             f'<script>window.open("{link}","_blank");</script>',
             unsafe_allow_html=True
@@ -202,6 +247,7 @@ Concern: {cause}
 
         st.success("Opening WhatsApp...")
 
+        # BACKUP BUTTON
         st.markdown(
             f"""
             <a href="{link}" target="_blank">
@@ -210,7 +256,7 @@ Concern: {cause}
                     color:white;
                     padding:16px;
                     border:none;
-                    border-radius:12px;
+                    border-radius:16px;
                     font-size:18px;
                     width:100%;
                 ">
@@ -222,6 +268,6 @@ Concern: {cause}
         )
 
     else:
-        st.error("Fill all fields")
+        st.error("Please fill all fields")
 
 st.markdown('</div>', unsafe_allow_html=True)
