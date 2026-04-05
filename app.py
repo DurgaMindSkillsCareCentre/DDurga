@@ -2,223 +2,247 @@ import streamlit as st
 import requests
 import urllib.parse
 import re
+import time
 
 # =========================
-# 🔐 API KEYS
+# 🔐 API KEYS (ADD IN SECRETS)
 # =========================
 GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 DEEPSEEK_API_KEY = st.secrets.get("DEEPSEEK_API_KEY", "")
 SERPER_API_KEY = st.secrets.get("SERPER_API_KEY", "")
 
 # =========================
-# 🎨 UI
+# 🎨 PREMIUM UI
 # =========================
-st.set_page_config(page_title="Durga AI", layout="centered")
+st.set_page_config(page_title="Durga AI", layout="wide")
 
 st.markdown("""
 <style>
-.stApp {
-    background: linear-gradient(135deg, #4e54c8, #8f94fb);
-    color: white;
+body {
+    background: linear-gradient(135deg,#4e54c8,#8f94fb);
 }
 textarea, input {
-    background: white !important;
-    color: black !important;
     border-radius: 12px !important;
 }
-button {
-    background: #111 !important;
+.stButton button {
+    background: black !important;
     color: white !important;
-    border-radius: 12px !important;
-    font-weight: bold !important;
+    border-radius: 12px;
+    font-weight: bold;
 }
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🏥 DURGA PSYCHIATRIC CENTRE")
-st.subheader("🧠 AI Mental Health Assistant")
+# =========================
+# 👩 PROFILE SECTION
+# =========================
+col1, col2 = st.columns([1,2])
+
+with col1:
+    st.image("profile.jpg", width=180)
+
+with col2:
+    st.markdown("""
+### D.Durga  
+**DPN (Nursing), DAHM, BBA, MBA(HR), MSW (Medical & Psychiatry)**  
+**Founder & CEO**  
+**Durga Psychiatric Centre**
+""")
+
+st.markdown("---")
 
 # =========================
 # 🧠 LOCAL AI
 # =========================
-def local_ai(prompt):
-    return "Take a deep breath. Relax your mind step by step."
+def local_ai(q):
+    q = q.lower()
+    if "anxiety" in q:
+        return "Anxiety is when your brain's alarm system becomes overactive, even without real danger."
+    if "sleep" in q:
+        return "Sleep problems often occur due to stress, irregular routines, or overthinking."
+    if "depression" in q:
+        return "Depression is a condition causing persistent sadness, low energy, and loss of interest."
+    return "Take a deep breath. Focus on one small step at a time."
 
 # =========================
-# 🌐 GEMINI
+# 🤖 GEMINI
 # =========================
-def gemini(prompt):
+def gemini_ai(q):
     if not GEMINI_API_KEY:
         return None
     try:
         url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-
-        res = requests.post(url, json={
-            "contents":[{"parts":[{"text":prompt}]}]
-        }, timeout=5)
-
-        if res.status_code != 200:
-            return None
-
-        return res.json()["candidates"][0]["content"]["parts"][0]["text"]
+        payload = {"contents":[{"parts":[{"text":q}]}]}
+        r = requests.post(url, json=payload, timeout=6)
+        data = r.json()
+        return data["candidates"][0]["content"]["parts"][0]["text"]
     except:
         return None
 
 # =========================
-# 🔥 DEEPSEEK
+# 🤖 DEEPSEEK
 # =========================
-def deepseek(prompt):
+def deepseek_ai(q):
     if not DEEPSEEK_API_KEY:
         return None
     try:
-        res = requests.post(
-            "https://api.deepseek.com/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
-                "Content-Type": "application/json"
-            },
-            json={
-                "model":"deepseek-chat",
-                "messages":[{"role":"user","content":prompt}]
-            },
-            timeout=5
-        )
-
-        if res.status_code != 200:
-            return None
-
-        return res.json()["choices"][0]["message"]["content"]
+        url = "https://api.deepseek.com/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": "deepseek-chat",
+            "messages":[{"role":"user","content":q}]
+        }
+        r = requests.post(url, json=payload, headers=headers, timeout=6)
+        data = r.json()
+        return data["choices"][0]["message"]["content"]
     except:
         return None
 
 # =========================
-# 🔍 SERPER SEARCH
+# 🌐 SERPER SEARCH
 # =========================
-def serper_links(query):
+def serper_search(q):
     if not SERPER_API_KEY:
         return []
-
     try:
-        res = requests.post(
-            "https://google.serper.dev/search",
-            headers={"X-API-KEY": SERPER_API_KEY},
-            json={"q": query},
-            timeout=6
-        ).json()
-
-        links = []
-        for item in res.get("organic", [])[:3]:
-            if item.get("link"):
-                links.append(item["link"])
-
-        return links
+        url = "https://google.serper.dev/search"
+        headers = {"X-API-KEY": SERPER_API_KEY}
+        payload = {"q": q}
+        r = requests.post(url, json=payload, headers=headers)
+        data = r.json()
+        return [i["link"] for i in data.get("organic", [])[:3]]
     except:
         return []
 
 # =========================
-# 🌍 SCRAPE WEB CONTENT
+# 🧹 CLEAN TEXT
 # =========================
-def scrape_text(url):
-    try:
-        html = requests.get(url, timeout=5).text
+def clean_text(html):
+    html = re.sub(r'<script.*?>.*?</script>', '', html, flags=re.S)
+    html = re.sub(r'<style.*?>.*?</style>', '', html, flags=re.S)
+    text = re.sub(r'<[^>]+>', ' ', html)
+    text = re.sub(r'\s+', ' ', text)
 
-        # remove scripts/styles
-        html = re.sub(r'<script.*?>.*?</script>', '', html, flags=re.S)
-        html = re.sub(r'<style.*?>.*?</style>', '', html, flags=re.S)
+    blacklist = ["menu","login","privacy","terms","contact"]
 
-        # remove tags
-        text = re.sub(r'<[^>]+>', ' ', html)
-
-        # clean spaces
-        text = re.sub(r'\s+', ' ', text)
-
-        return text[:2000]  # limit size
-    except:
-        return ""
-
-# =========================
-# 🧠 SUMMARIZER
-# =========================
-def summarize(text):
     sentences = text.split(".")
-    return ". ".join(sentences[:5]).strip() + "."
+    good = []
+    for s in sentences:
+        if len(s) > 40 and not any(b in s.lower() for b in blacklist):
+            good.append(s.strip())
+
+    return ". ".join(good[:20])
 
 # =========================
-# 🔥 MULTI-PAGE WEB AI
+# 🧠 SUMMARY ENGINE
 # =========================
-def multi_web_ai(query):
+def summarize(text, query):
+    sents = text.split(".")
+    scored = []
 
-    links = serper_links(query)
+    for s in sents:
+        score = sum(word in s.lower() for word in query.lower().split())
+        if score > 0:
+            scored.append((score, s))
 
-    if not links:
-        return None
+    scored.sort(reverse=True)
+    best = [s for _, s in scored[:5]]
 
+    return ". ".join(best)
+
+# =========================
+# 🌐 WEB AI
+# =========================
+def web_ai(q):
+    links = serper_search(q)
     combined = ""
 
     for link in links:
-        combined += scrape_text(link) + " "
+        try:
+            html = requests.get(link, timeout=5).text
+            combined += clean_text(html)
+        except:
+            continue
 
-    if not combined.strip():
-        return None
+    if combined:
+        return summarize(combined, q)
 
-    return summarize(combined)
-
-# =========================
-# 🧠 SMART ROUTER
-# =========================
-def smart_ai(prompt):
-
-    # 1️⃣ Gemini
-    g = gemini(prompt)
-    if g:
-        return g, "Gemini"
-
-    # 2️⃣ DeepSeek
-    d = deepseek(prompt)
-    if d:
-        return d, "DeepSeek"
-
-    # 3️⃣ 🔥 Multi-page Web AI
-    w = multi_web_ai(prompt)
-    if w:
-        return w, "Web AI (Multi)"
-
-    # 4️⃣ Local fallback
-    return local_ai(prompt), "Local AI"
+    return None
 
 # =========================
-# 💬 CHAT
+# 🧠 MASTER AI
 # =========================
-if "chat" not in st.session_state:
-    st.session_state.chat = []
+def smart_ai(q):
 
-with st.form("chat_form", clear_on_submit=True):
-    user_input = st.text_area("Tell me what you're feeling:")
-    submitted = st.form_submit_button("SEND")
+    # 1 Gemini
+    r = gemini_ai(q)
+    if r:
+        return "🤖 Gemini: " + r
 
-if submitted and user_input.strip():
+    # 2 DeepSeek
+    r = deepseek_ai(q)
+    if r:
+        return "🤖 DeepSeek: " + r
 
-    response, source = smart_ai(user_input)
+    # 3 Web AI
+    r = web_ai(q)
+    if r:
+        return "🌐 Web AI: " + r
 
-    st.session_state.chat.append(("You", user_input))
-    st.session_state.chat.append((f"AI ({source})", response))
-
-for role, msg in st.session_state.chat:
-    st.markdown(f"**{role}:** {msg}")
+    # 4 Local fallback
+    return "⚠️ Local AI: " + local_ai(q)
 
 # =========================
-# 📞 CONSULT
+# UI INPUT
 # =========================
+if "input_text" not in st.session_state:
+    st.session_state.input_text = ""
+
+user_input = st.text_area("Tell me what you're feeling:", key="input_text")
+
+if st.button("SEND"):
+    if user_input.strip():
+        response = smart_ai(user_input)
+
+        st.markdown(f"### You: {user_input}")
+        st.markdown(f"### {response}")
+
+        # CLEAR INPUT
+        st.session_state.input_text = ""
+
+        # =========================
+        # 📲 WHATSAPP AUTO
+        # =========================
+        msg = urllib.parse.quote(f"Name: User\nQuery: {user_input}")
+        url = f"https://wa.me/917395944527?text={msg}"
+
+        st.markdown(f"""
+<a href="{url}" target="_blank">
+<button style="background:black;color:white;padding:10px;border-radius:10px;">
+Open WhatsApp
+</button>
+</a>
+""", unsafe_allow_html=True)
+
 st.markdown("---")
-st.subheader("📞 Book Consultation")
+
+# =========================
+# 📞 CONSULTATION FORM
+# =========================
+st.markdown("## 📞 Book Consultation")
 
 name = st.text_input("Name")
-phone = st.text_input("Phone")
+phone = st.text_input("Phone Number")
+
+concern = st.selectbox("Select Concern",
+    ["Stress","Anxiety","Depression","Sleep Issues"])
 
 if st.button("Submit & Continue"):
-    if name and phone:
-        msg = f"Hello, I am {name}. Phone: {phone}"
-        link = f"https://wa.me/917395944527?text={urllib.parse.quote(msg)}"
-
-        st.markdown(f'<meta http-equiv="refresh" content="1;url={link}">', unsafe_allow_html=True)
-        st.success("Opening WhatsApp...")
+    msg = urllib.parse.quote(
+        f"Name:{name}\nPhone:{phone}\nConcern:{concern}"
+    )
+    link = f"https://wa.me/917395944527?text={msg}"
+    st.markdown(f"[Click to Chat on WhatsApp]({link})")
