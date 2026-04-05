@@ -1,112 +1,104 @@
 import streamlit as st
 import requests
-import time
 import urllib.parse
+from bs4 import BeautifulSoup
 
 # =========================
-# 🔐 API KEYS (Streamlit Secrets)
+# 🔐 API KEYS
 # =========================
 GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 DEEPSEEK_API_KEY = st.secrets.get("DEEPSEEK_API_KEY", "")
 
 # =========================
-# 🎨 PREMIUM UI (iPhone Style)
+# 🎨 PREMIUM UI
 # =========================
 st.markdown("""
 <style>
-body {
-    background: linear-gradient(135deg, #4e54c8, #8f94fb);
-}
 .stApp {
     background: linear-gradient(135deg, #4e54c8, #8f94fb);
     color: white;
 }
 textarea, input, select {
-    background-color: #ffffff !important;
-    color: #000000 !important;
+    background-color: white !important;
+    color: black !important;
     border-radius: 10px !important;
 }
 button {
-    background: linear-gradient(135deg, #000000, #333333) !important;
+    background: #111 !important;
     color: white !important;
     border-radius: 12px !important;
     font-weight: bold !important;
 }
 .whatsapp-btn {
-    background: linear-gradient(135deg, #0f9d58, #25D366);
+    background: #0f9d58;
     color: white;
     padding: 14px;
     border-radius: 12px;
     text-align: center;
     font-weight: bold;
-    margin-top: 10px;
 }
 </style>
 """, unsafe_allow_html=True)
 
 # =========================
-# 👩 PROFILE SECTION
+# 🏥 HEADER
+# =========================
+st.title("🏥 DURGA PSYCHIATRIC CENTRE")
+st.subheader("🧠 AI Mental Health Assistant")
+
+# =========================
+# 👩 PROFILE
 # =========================
 try:
-    st.image("profile.jpg", width=150)
+    st.image("profile.jpg", width=140)
 except:
-    st.warning("Upload profile.jpg in your repo")
+    pass
 
 st.markdown("""
-### **D. Durga**
-DPN (Nursing), DAHM, BBA, MBA(HR), MSW (Medical & Psychiatry)  
-**Founder & CEO – Durga Psychiatric Centre**
+**D. Durga**  
+DPN (Nursing), DAHM, BBA, MBA(HR), MSW  
+(Medical & Psychiatry)  
+Founder & CEO
 """)
 
 st.markdown("---")
 
 # =========================
-# 🧠 HEADER
-# =========================
-st.title("🧠 AI Mental Health Assistant")
-
-# =========================
-# 🤖 LOCAL AI (Instant)
+# 🧠 LOCAL AI
 # =========================
 def local_ai(prompt):
-    prompt = prompt.lower()
-    if "anxiety" in prompt:
-        return "Anxiety is your brain's alarm system becoming overactive. It tries to protect you but reacts too strongly."
-    if "sleep" in prompt:
-        return "Sleep issues often come from stress hormones staying high. Relax your body before bed."
-    return "Take slow breaths, relax your body, and focus on one small step."
+    p = prompt.lower()
+    if "anxiety" in p:
+        return "Anxiety is caused by overactivation of the brain’s fear center (amygdala) and stress hormones."
+    if "sleep" in p:
+        return "Sleep problems occur due to high stress, overthinking, and irregular sleep cycles."
+    return "Relax your body, slow your breathing, and take one step at a time."
 
 # =========================
-# 🌐 GEMINI API
+# 🌐 GEMINI
 # =========================
 def gemini(prompt):
     if not GEMINI_API_KEY:
-        return None, None
+        return None
     try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
-
+        url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
         res = requests.post(url, json={
             "contents": [{"parts": [{"text": prompt}]}]
-        }, timeout=6)
+        }, timeout=5)
 
         if res.status_code != 200:
-            st.warning(f"Gemini Error {res.status_code}")
-            return None, None
+            return None
 
-        data = res.json()
-        return data["candidates"][0]["content"]["parts"][0]["text"], "Gemini"
-
-    except Exception as e:
-        st.warning(f"Gemini failed: {e}")
-        return None, None
+        return res.json()["candidates"][0]["content"]["parts"][0]["text"]
+    except:
+        return None
 
 # =========================
-# 🔥 DEEPSEEK API (FIXED)
+# 🔥 DEEPSEEK
 # =========================
 def deepseek(prompt):
     if not DEEPSEEK_API_KEY:
-        return None, None
-
+        return None
     try:
         res = requests.post(
             "https://api.deepseek.com/v1/chat/completions",
@@ -116,59 +108,110 @@ def deepseek(prompt):
             },
             json={
                 "model": "deepseek-chat",
-                "messages": [
-                    {"role": "system", "content": "You are a helpful mental health assistant."},
-                    {"role": "user", "content": prompt}
-                ],
-                "temperature": 0.7,
-                "max_tokens": 500
+                "messages": [{"role": "user", "content": prompt}]
             },
-            timeout=8
+            timeout=5
         )
 
         if res.status_code != 200:
-            st.error(f"DeepSeek Error {res.status_code}")
-            st.code(res.text)
-            return None, None
+            return None
 
-        data = res.json()
-        return data["choices"][0]["message"]["content"], "DeepSeek"
-
-    except Exception as e:
-        st.error(f"DeepSeek Exception: {e}")
-        return None, None
+        return res.json()["choices"][0]["message"]["content"]
+    except:
+        return None
 
 # =========================
-# 🧠 SMART ROUTER
+# 🌍 WEB SEARCH (MULTI SOURCE)
+# =========================
+def web_search_ai(query):
+    results = []
+
+    # 1️⃣ DuckDuckGo
+    try:
+        url = "https://api.duckduckgo.com/"
+        params = {"q": query, "format": "json"}
+        res = requests.get(url, params=params, timeout=4).json()
+
+        if res.get("AbstractText"):
+            results.append(res["AbstractText"])
+
+        for t in res.get("RelatedTopics", []):
+            if isinstance(t, dict) and t.get("Text"):
+                results.append(t["Text"])
+                break
+    except:
+        pass
+
+    # 2️⃣ Wikipedia
+    try:
+        wiki_url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{query}"
+        res = requests.get(wiki_url, timeout=4).json()
+        if res.get("extract"):
+            results.append(res["extract"])
+    except:
+        pass
+
+    # 3️⃣ Basic scraping (fallback)
+    try:
+        search_url = f"https://duckduckgo.com/html/?q={query}"
+        html = requests.get(search_url, timeout=4).text
+        soup = BeautifulSoup(html, "html.parser")
+        snippets = soup.find_all("a", class_="result__a", limit=2)
+        for s in snippets:
+            results.append(s.text)
+    except:
+        pass
+
+    return summarize(results)
+
+# =========================
+# 🧠 SUMMARIZER
+# =========================
+def summarize(texts):
+    if not texts:
+        return None
+
+    combined = " ".join(texts)
+
+    # simple compression logic
+    sentences = combined.split(".")
+    summary = ". ".join(sentences[:3])
+
+    return summary.strip() + "."
+
+# =========================
+# 🧠 SMART ROUTER V5
 # =========================
 def smart_ai(prompt):
-    # Try Gemini first
-    response, source = gemini(prompt)
-    if response:
-        return response, source
 
-    # Then DeepSeek
-    response, source = deepseek(prompt)
-    if response:
-        return response, source
+    g = gemini(prompt)
+    if g:
+        return g, "Gemini"
 
-    # Finally local
+    d = deepseek(prompt)
+    if d:
+        return d, "DeepSeek"
+
+    w = web_search_ai(prompt)
+    if w:
+        return w, "Web AI"
+
     return local_ai(prompt), "Local AI"
 
 # =========================
-# 💬 CHAT UI
+# 💬 CHAT
 # =========================
 user_input = st.text_area("Tell me what you're feeling:")
 
 if st.button("SEND"):
-    if user_input:
+    if user_input.strip():
         response, source = smart_ai(user_input)
 
         st.markdown(f"**You:** {user_input}")
         st.markdown(f"**AI ({source}):** {response}")
 
 # =========================
-# 📞 CONSULTATION FORM
+# 📞 CONSULTATION
 # =========================
 st.markdown("---")
 st.subheader("📞 Book Consultation")
@@ -179,25 +222,16 @@ concern = st.selectbox("Select Concern", ["Stress", "Anxiety", "Depression", "Sl
 
 if st.button("Submit & Continue"):
     if name and phone:
-        message = f"""
-Hello, I am {name}.
-Concern: {concern}
-Phone: {phone}
-"""
 
-        encoded = urllib.parse.quote(message)
-        whatsapp_url = f"https://wa.me/917395944527?text={encoded}"
+        msg = f"Hello, I am {name}. Concern: {concern}. Phone: {phone}"
+        encoded = urllib.parse.quote(msg)
+        url = f"https://wa.me/917395944527?text={encoded}"
 
-        # AUTO OPEN WHATSAPP
-        st.markdown(f"""
-        <meta http-equiv="refresh" content="1;url={whatsapp_url}">
-        """, unsafe_allow_html=True)
-
+        st.markdown(f'<meta http-equiv="refresh" content="1;url={url}">', unsafe_allow_html=True)
         st.success("Opening WhatsApp...")
 
-        # BUTTON
         st.markdown(f"""
-        <a href="{whatsapp_url}" target="_blank">
+        <a href="{url}" target="_blank">
             <div class="whatsapp-btn">💬 Open WhatsApp</div>
         </a>
         """, unsafe_allow_html=True)
