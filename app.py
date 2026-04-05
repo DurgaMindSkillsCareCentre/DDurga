@@ -7,9 +7,12 @@ import time
 API_KEY = st.secrets["GEMINI_API_KEY"]
 WHATSAPP_NUMBER = "917395944527"
 
-# 🔥 Model fallback chain (auto switch if one fails)
-MODELS = [
-    "models/gemini-2.0-flash",
+# ⚡ FAST FIRST MODEL (VERY IMPORTANT)
+PRIMARY_MODEL = "models/gemini-2.0-flash"
+
+# 🔁 FALLBACK MODELS (ONLY IF FAIL)
+FALLBACK_MODELS = [
+    "models/gemini-2.0-flash-001",
     "models/gemini-flash-latest",
     "models/gemini-1.5-flash"
 ]
@@ -24,43 +27,48 @@ st.markdown("## 🧠 AI Mental Health Assistant")
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# ================= AI FUNCTION =================
-def ask_gemini(prompt):
+# ================= AI FUNCTION (FAST) =================
+def call_model(model, prompt):
+    url = f"https://generativelanguage.googleapis.com/v1beta/{model}:generateContent?key={API_KEY}"
 
     payload = {
         "contents": [
             {
                 "parts": [
                     {
-                        "text": f"You are a calm psychologist. Give helpful short advice.\nUser: {prompt}"
+                        "text": f"You are a calm psychologist. Give short helpful advice.\nUser: {prompt}"
                     }
                 ]
             }
         ]
     }
 
-    # 🔁 Try multiple models + retries
-    for model in MODELS:
-        url = f"https://generativelanguage.googleapis.com/v1beta/{model}:generateContent?key={API_KEY}"
+    res = requests.post(url, json=payload, timeout=6)
 
-        for attempt in range(3):
-            try:
-                res = requests.post(url, json=payload, timeout=12)
+    if res.status_code == 200:
+        data = res.json()
+        return data["candidates"][0]["content"]["parts"][0]["text"]
 
-                if res.status_code == 200:
-                    data = res.json()
+    return None
 
-                    if "candidates" in data:
-                        return data["candidates"][0]["content"]["parts"][0]["text"]
 
-                time.sleep(1 + attempt)
+def ask_ai(prompt):
 
-            except:
-                time.sleep(1)
+    # ⚡ STEP 1: FAST MODEL FIRST
+    result = call_model(PRIMARY_MODEL, prompt)
+    if result:
+        return result
 
-    return "⚠️ AI is temporarily busy. Please try again."
+    # 🔁 STEP 2: FALLBACK ONLY IF NEEDED
+    for model in FALLBACK_MODELS:
+        result = call_model(model, prompt)
+        if result:
+            return result
 
-# ================= CHAT INPUT (FIXED) =================
+    return "⚠️ AI busy. Please try again in a few seconds."
+
+
+# ================= CHAT (FIXED UX) =================
 with st.form(key="chat_form", clear_on_submit=True):
 
     user_input = st.text_area(
@@ -71,11 +79,13 @@ with st.form(key="chat_form", clear_on_submit=True):
     submitted = st.form_submit_button("Send")
 
     if submitted and user_input.strip():
+
         st.session_state.messages.append(("You", user_input))
 
-        reply = ask_gemini(user_input)
+        reply = ask_ai(user_input)
 
         st.session_state.messages.append(("Assistant", reply))
+
 
 # ================= DISPLAY =================
 for role, msg in st.session_state.messages:
@@ -93,7 +103,7 @@ concern = st.selectbox(
     ["Stress", "Anxiety", "Depression", "Relationship Issue", "Addiction", "Other"]
 )
 
-# ================= WHATSAPP =================
+# ================= WHATSAPP MESSAGE =================
 if name and phone:
 
     message = f"""Hello Durga Psychiatric Centre,
@@ -129,4 +139,4 @@ Please contact me."""
     )
 
 else:
-    st.info("Fill details to enable booking")
+    st.info("Fill details to enable WhatsApp booking")
