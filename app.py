@@ -20,28 +20,21 @@ if "messages" not in st.session_state:
 if "quota_exceeded" not in st.session_state:
     st.session_state.quota_exceeded = False
 
-if "lead_data" not in st.session_state:
-    st.session_state.lead_data = None
-
 # ================= AI =================
 def offline_ai(text):
     text = text.lower()
 
     if "stress" in text:
-        return random.choice([
-            "You're under pressure. Break tasks into small steps.",
-            "Try deep breathing and focus on one task.",
-            "Take a short break. Reset your mind."
-        ])
+        return "Break tasks into smaller steps. You don’t need to do everything at once."
 
     if "sleep" in text:
-        return "Reduce screen time before bed and practice slow breathing."
+        return "Reduce screen time and practice slow breathing before sleep."
 
     if "anxiety" in text:
         return "Focus on the present moment. Try grounding techniques."
 
     if "anger" in text:
-        return "Pause and breathe before reacting."
+        return "Pause and take a deep breath before reacting."
 
     return "I'm here to support you. Tell me more."
 
@@ -90,7 +83,6 @@ with st.form("chat_form", clear_on_submit=True):
     send = st.form_submit_button("Send")
 
     if send and user_input.strip():
-
         st.session_state.messages.append(("You", user_input))
         reply = smart_ai(user_input)
         st.session_state.messages.append(("Assistant", reply))
@@ -103,60 +95,61 @@ for role, msg in st.session_state.messages:
 st.markdown("---")
 st.subheader("📞 Book a Consultation")
 
-with st.form("consult_form"):
+name = st.text_input("Name")
+phone = st.text_input("Phone Number")
 
-    name = st.text_input("Name")
-    phone = st.text_input("Phone Number")
+cause = st.selectbox(
+    "Select Your Concern",
+    ["Stress", "Anxiety", "Depression", "Sleep Issue", "Relationship Issue", "Other"]
+)
 
-    cause = st.selectbox(
-        "Select Your Concern",
-        ["Stress", "Anxiety", "Depression", "Sleep Issue", "Relationship Issue", "Other"]
-    )
+# ================= SUBMIT BUTTON =================
+if st.button("Submit & Continue"):
 
-    submit = st.form_submit_button("Submit & Chat on WhatsApp")
+    if name and phone:
 
-    if submit:
-        if name and phone:
-            st.session_state.lead_data = {
-                "name": name,
-                "phone": phone,
-                "cause": cause
-            }
-            st.success("Redirecting to WhatsApp...")
-        else:
-            st.error("Please fill all fields")
-
-# ================= WHATSAPP BUTTON =================
-if st.session_state.lead_data:
-
-    data = st.session_state.lead_data
-
-    message = f"""Hello,
+        message = f"""Hello,
 I want to book a consultation.
 
-Name: {data['name']}
-Phone: {data['phone']}
-Concern: {data['cause']}
+Name: {name}
+Phone: {phone}
+Concern: {cause}
 """
 
-    link = f"https://wa.me/{WHATSAPP_NUMBER}?text={urllib.parse.quote(message)}"
+        link = f"https://wa.me/{WHATSAPP_NUMBER}?text={urllib.parse.quote(message)}"
 
-    st.markdown(
-        f"""
-        <a href="{link}" target="_blank">
-            <button style="
-                background:#25D366;
-                color:white;
-                padding:16px;
-                border:none;
-                border-radius:10px;
-                font-size:18px;
-                width:100%;
-                font-weight:bold;
-            ">
-            💬 Continue to WhatsApp
-            </button>
-        </a>
-        """,
-        unsafe_allow_html=True
-    )
+        # 🔥 AUTO OPEN WHATSAPP
+        st.markdown(
+            f"""
+            <script>
+            window.open("{link}", "_blank");
+            </script>
+            """,
+            unsafe_allow_html=True
+        )
+
+        st.success("Opening WhatsApp...")
+
+        # ✅ BACKUP BUTTON
+        st.markdown(
+            f"""
+            <a href="{link}" target="_blank">
+                <button style="
+                    background:#25D366;
+                    color:white;
+                    padding:16px;
+                    border:none;
+                    border-radius:10px;
+                    font-size:18px;
+                    width:100%;
+                    font-weight:bold;
+                ">
+                💬 Click here if WhatsApp did not open
+                </button>
+            </a>
+            """,
+            unsafe_allow_html=True
+        )
+
+    else:
+        st.error("Please fill all fields")
