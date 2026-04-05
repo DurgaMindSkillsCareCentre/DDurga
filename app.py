@@ -1,16 +1,20 @@
 import streamlit as st
 import requests
 import urllib.parse
+import re
 
 # =========================
 # 🔐 API KEYS
 # =========================
 GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 DEEPSEEK_API_KEY = st.secrets.get("DEEPSEEK_API_KEY", "")
+SERPER_API_KEY = st.secrets.get("SERPER_API_KEY", "")
 
 # =========================
-# 🎨 UI DESIGN
+# 🎨 UI
 # =========================
+st.set_page_config(page_title="Durga AI", layout="centered")
+
 st.markdown("""
 <style>
 .stApp {
@@ -31,22 +35,14 @@ button {
 </style>
 """, unsafe_allow_html=True)
 
-# =========================
-# 🏥 HEADER
-# =========================
 st.title("🏥 DURGA PSYCHIATRIC CENTRE")
 st.subheader("🧠 AI Mental Health Assistant")
 
 # =========================
-# 🧠 LOCAL AI (LAST RESORT)
+# 🧠 LOCAL AI
 # =========================
 def local_ai(prompt):
-    p = prompt.lower()
-    if "mood swing" in p:
-        return "Mood swings are like your feelings changing quickly, like sunny to rainy."
-    if "anxiety" in p:
-        return "Anxiety is when your brain feels too worried even when there is no danger."
-    return "Take a deep breath and relax your mind step by step."
+    return "Take a deep breath. Relax your mind step by step."
 
 # =========================
 # 🌐 GEMINI
@@ -58,7 +54,7 @@ def gemini(prompt):
         url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
 
         res = requests.post(url, json={
-            "contents": [{"parts": [{"text": prompt}]}]
+            "contents":[{"parts":[{"text":prompt}]}]
         }, timeout=5)
 
         if res.status_code != 200:
@@ -82,8 +78,8 @@ def deepseek(prompt):
                 "Content-Type": "application/json"
             },
             json={
-                "model": "deepseek-chat",
-                "messages": [{"role": "user", "content": prompt}]
+                "model":"deepseek-chat",
+                "messages":[{"role":"user","content":prompt}]
             },
             timeout=5
         )
@@ -96,56 +92,76 @@ def deepseek(prompt):
         return None
 
 # =========================
-# 🌍 ADVANCED WEB AI
+# 🔍 SERPER SEARCH
 # =========================
-def web_ai(prompt):
-    results = []
+def serper_links(query):
+    if not SERPER_API_KEY:
+        return []
 
-    # DuckDuckGo
     try:
-        res = requests.get(
-            "https://api.duckduckgo.com/",
-            params={"q": prompt, "format": "json"},
-            timeout=4
+        res = requests.post(
+            "https://google.serper.dev/search",
+            headers={"X-API-KEY": SERPER_API_KEY},
+            json={"q": query},
+            timeout=6
         ).json()
 
-        if res.get("AbstractText"):
-            results.append(res["AbstractText"])
+        links = []
+        for item in res.get("organic", [])[:3]:
+            if item.get("link"):
+                links.append(item["link"])
 
-        for topic in res.get("RelatedTopics", [])[:5]:
-            if isinstance(topic, dict) and topic.get("Text"):
-                results.append(topic["Text"])
+        return links
     except:
-        pass
+        return []
 
-    # Wikipedia
+# =========================
+# 🌍 SCRAPE WEB CONTENT
+# =========================
+def scrape_text(url):
     try:
-        res = requests.get(
-            f"https://en.wikipedia.org/api/rest_v1/page/summary/{prompt}",
-            timeout=4
-        ).json()
+        html = requests.get(url, timeout=5).text
 
-        if res.get("extract"):
-            results.append(res["extract"])
+        # remove scripts/styles
+        html = re.sub(r'<script.*?>.*?</script>', '', html, flags=re.S)
+        html = re.sub(r'<style.*?>.*?</style>', '', html, flags=re.S)
+
+        # remove tags
+        text = re.sub(r'<[^>]+>', ' ', html)
+
+        # clean spaces
+        text = re.sub(r'\s+', ' ', text)
+
+        return text[:2000]  # limit size
     except:
-        pass
-
-    return summarize(results)
+        return ""
 
 # =========================
 # 🧠 SUMMARIZER
 # =========================
-def summarize(texts):
-    if not texts:
+def summarize(text):
+    sentences = text.split(".")
+    return ". ".join(sentences[:5]).strip() + "."
+
+# =========================
+# 🔥 MULTI-PAGE WEB AI
+# =========================
+def multi_web_ai(query):
+
+    links = serper_links(query)
+
+    if not links:
         return None
 
-    combined = " ".join(texts)
+    combined = ""
 
-    # Clean summary
-    sentences = combined.split(".")
-    summary = ". ".join(sentences[:4])
+    for link in links:
+        combined += scrape_text(link) + " "
 
-    return summary.strip() + "."
+    if not combined.strip():
+        return None
+
+    return summarize(combined)
 
 # =========================
 # 🧠 SMART ROUTER
@@ -162,55 +178,47 @@ def smart_ai(prompt):
     if d:
         return d, "DeepSeek"
 
-    # 3️⃣ Web AI (MAIN FALLBACK)
-    w = web_ai(prompt)
+    # 3️⃣ 🔥 Multi-page Web AI
+    w = multi_web_ai(prompt)
     if w:
-        return w, "Web AI"
+        return w, "Web AI (Multi)"
 
-    # 4️⃣ Local AI (LAST)
+    # 4️⃣ Local fallback
     return local_ai(prompt), "Local AI"
 
 # =========================
-# 💬 CHAT UI
+# 💬 CHAT
 # =========================
-if "input_text" not in st.session_state:
-    st.session_state.input_text = ""
+if "chat" not in st.session_state:
+    st.session_state.chat = []
 
-user_input = st.text_area(
-    "Tell me what you're feeling:",
-    key="input_text"
-)
+with st.form("chat_form", clear_on_submit=True):
+    user_input = st.text_area("Tell me what you're feeling:")
+    submitted = st.form_submit_button("SEND")
 
-if st.button("SEND"):
-    if user_input.strip():
+if submitted and user_input.strip():
 
-        response, source = smart_ai(user_input)
+    response, source = smart_ai(user_input)
 
-        st.markdown(f"**You:** {user_input}")
-        st.markdown(f"**AI ({source}):** {response}")
+    st.session_state.chat.append(("You", user_input))
+    st.session_state.chat.append((f"AI ({source})", response))
 
-        # 🔥 CLEAR INPUT BOX
-        st.session_state.input_text = ""
+for role, msg in st.session_state.chat:
+    st.markdown(f"**{role}:** {msg}")
 
 # =========================
-# 📞 CONSULTATION
+# 📞 CONSULT
 # =========================
 st.markdown("---")
 st.subheader("📞 Book Consultation")
 
 name = st.text_input("Name")
-phone = st.text_input("Phone Number")
-concern = st.selectbox("Concern", ["Stress", "Anxiety", "Depression", "Sleep"])
+phone = st.text_input("Phone")
 
 if st.button("Submit & Continue"):
     if name and phone:
-        msg = f"Hello, I am {name}. Concern: {concern}. Phone: {phone}"
-        encoded = urllib.parse.quote(msg)
+        msg = f"Hello, I am {name}. Phone: {phone}"
+        link = f"https://wa.me/917395944527?text={urllib.parse.quote(msg)}"
 
-        url = f"https://wa.me/917395944527?text={encoded}"
-
-        st.markdown(f'<meta http-equiv="refresh" content="1;url={url}">', unsafe_allow_html=True)
+        st.markdown(f'<meta http-equiv="refresh" content="1;url={link}">', unsafe_allow_html=True)
         st.success("Opening WhatsApp...")
-
-    else:
-        st.warning("Fill all fields")
