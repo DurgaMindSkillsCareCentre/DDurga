@@ -1,15 +1,16 @@
 import streamlit as st
 import requests
 import urllib.parse
-import re
 
 # =========================
 # CONFIG
 # =========================
 st.set_page_config(page_title="Durga AI", layout="centered")
 
+SERPER_API_KEY = "YOUR_SERPER_API_KEY_HERE"
+
 # =========================
-# PREMIUM UI
+# SAFE PREMIUM UI
 # =========================
 st.markdown("""
 <style>
@@ -27,9 +28,8 @@ textarea, input {
 .stButton>button {
     background: black;
     color: white;
-    border-radius: 12px;
+    border-radius: 10px;
     font-weight: bold;
-    padding: 10px 20px;
 }
 
 /* WhatsApp Button */
@@ -53,9 +53,6 @@ textarea, input {
 # =========================
 st.title("DURGA PSYCHIATRIC CENTRE")
 
-# =========================
-# PROFILE
-# =========================
 try:
     st.image("profile.jpg", width=180)
 except:
@@ -72,59 +69,60 @@ Durga Psychiatric Centre
 st.divider()
 
 # =========================
-# SMART AI
+# AI FUNCTIONS
 # =========================
+def summarize(text):
+    sentences = text.split(".")
+    clean = [s.strip() for s in sentences if len(s.strip()) > 20]
+    return ". ".join(clean[:3]) + "."
 
-def clean_text(text):
-    text = re.sub(r'\s+', ' ', text)
-    return text.strip()
-
-def web_scrape_ai(query):
+def serper_search(query):
     try:
-        search_url = "https://html.duckduckgo.com/html/?q=" + urllib.parse.quote(query)
-        html = requests.get(search_url, timeout=5).text
+        url = "https://google.serper.dev/search"
+        headers = {
+            "X-API-KEY": SERPER_API_KEY,
+            "Content-Type": "application/json"
+        }
+        payload = {"q": query}
 
-        links = re.findall(r'nofollow" class="result__a" href="(.*?)"', html)
+        res = requests.post(url, headers=headers, json=payload, timeout=8)
+        data = res.json()
 
-        if not links:
+        if "organic" not in data:
             return None
 
-        first_link = links[0]
-        page = requests.get(first_link, timeout=5).text
+        snippets = []
+        for item in data["organic"][:3]:
+            if "snippet" in item:
+                snippets.append(item["snippet"])
 
-        paragraphs = re.findall(r'<p>(.*?)</p>', page)
-
-        text = " ".join(paragraphs[:5])
-        text = re.sub('<.*?>', '', text)
-
-        text = clean_text(text)
-
-        if len(text) < 50:
+        if not snippets:
             return None
 
-        return text[:300]
+        combined = " ".join(snippets)
+        return summarize(combined)
 
     except:
         return None
 
-
 def local_ai(q):
-    if "sleep" in q.lower():
-        return "Sleep problems happen due to stress, overthinking, or irregular routine. Try fixed sleep time and avoid screens before bed."
-    if "depress" in q.lower():
-        return "Depression is prolonged sadness, low energy, and loss of interest. Talking to someone and small daily actions help recovery."
-    if "stress" in q.lower():
-        return "Stress is your body's response to pressure. Slow breathing, rest, and breaking tasks into small steps helps."
-    return "Take a slow breath. You are safe. Focus on one step at a time."
+    q = q.lower()
 
+    if "sleep" in q or "insomnia" in q:
+        return "Insomnia is difficulty sleeping due to stress or irregular routine. Maintain fixed sleep time and reduce screen use before bed."
+    
+    if "anxiety" in q:
+        return "Anxiety is excessive worry without real danger. It activates the body stress response. Breathing and relaxation help control it."
+    
+    if "depress" in q:
+        return "Depression is persistent sadness, low energy, and loss of interest. Early support, routine, and professional help improve recovery."
+
+    return "Take a slow breath. Focus on one step at a time. You are safe."
 
 def smart_ai(q):
-    # 1️⃣ WEB AI
-    result = web_scrape_ai(q)
+    result = serper_search(q)
     if result:
         return result
-
-    # 2️⃣ LOCAL FALLBACK
     return local_ai(q)
 
 # =========================
@@ -137,7 +135,7 @@ if "user_input" not in st.session_state:
     st.session_state.user_input = ""
 
 # =========================
-# SEND HANDLER
+# SEND FUNCTION
 # =========================
 def handle_send():
     q = st.session_state.user_input.strip()
@@ -156,43 +154,47 @@ def handle_send():
 # =========================
 st.subheader("AI Mental Health Assistant")
 
-st.text_area(
-    "Tell me what you're feeling",
-    key="user_input"
-)
+st.text_area("Tell me what you're feeling", key="user_input")
 
 st.button("SEND", on_click=handle_send)
 
 # =========================
-# CHAT
+# CHAT DISPLAY (ISOLATED)
 # =========================
-for role, msg in st.session_state.history:
-    st.write(f"**{role}:** {msg}")
+with st.container():
+    for role, msg in st.session_state.history:
+        st.write(f"**{role}:** {msg}")
+
+# =========================
+# SPACE FIX (IMPORTANT)
+# =========================
+st.markdown("<br><br><br>", unsafe_allow_html=True)
+st.divider()
 
 # =========================
 # CONSULT FORM
 # =========================
-st.divider()
-st.subheader("Book Consultation")
+with st.container():
+    st.subheader("Book Consultation")
 
-name = st.text_input("Name")
-phone = st.text_input("Mobile Number")
-concern = st.selectbox(
-    "Concern",
-    ["Stress", "Anxiety", "Depression", "Sleep Issues"]
-)
+    name = st.text_input("Name")
+    phone = st.text_input("Mobile Number")
+    concern = st.selectbox(
+        "Concern",
+        ["Stress", "Anxiety", "Depression", "Sleep Issues"]
+    )
 
-if st.button("Submit"):
-    if name and phone:
-        msg = urllib.parse.quote(
-            f"Name: {name}\nPhone: {phone}\nConcern: {concern}"
-        )
+    if st.button("Submit"):
+        if name and phone:
+            msg = urllib.parse.quote(
+                f"Name: {name}\nPhone: {phone}\nConcern: {concern}"
+            )
 
-        wa_url = f"https://wa.me/917395944527?text={msg}"
+            wa_url = f"https://wa.me/917395944527?text={msg}"
 
-        st.markdown(
-            f'<a class="whatsapp-btn" href="{wa_url}" target="_blank">CLICK TO OPEN WHATSAPP</a>',
-            unsafe_allow_html=True
-        )
-    else:
-        st.warning("Fill all details")
+            st.markdown(
+                f'<a class="whatsapp-btn" href="{wa_url}" target="_blank">CLICK TO OPEN WHATSAPP</a>',
+                unsafe_allow_html=True
+            )
+        else:
+            st.warning("Fill all details")
