@@ -9,53 +9,85 @@ WHATSAPP_NUMBER = "917395944527"
 
 st.set_page_config(page_title="Durga Psychiatric Centre", layout="centered")
 
-# ================= CUSTOM STYLE =================
+# ================= PREMIUM UI =================
 st.markdown("""
 <style>
-body {
-    background-color: #f5f7fb;
-}
-.main {
-    background-color: #ffffff;
-    padding: 15px;
-    border-radius: 12px;
-}
-h1, h2, h3 {
-    color: #2c3e50;
-}
-.stButton button {
-    background-color: #25D366;
+
+/* BACKGROUND GRADIENT */
+.stApp {
+    background: linear-gradient(135deg, #667eea, #764ba2);
     color: white;
-    border-radius: 8px;
+}
+
+/* MAIN CARD */
+.main-card {
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(12px);
+    padding: 20px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+
+/* PROFILE CARD */
+.profile-card {
+    background: linear-gradient(135deg, #ff9a9e, #fad0c4);
+    padding: 15px;
+    border-radius: 15px;
+    color: black;
+}
+
+/* BUTTON */
+.stButton button {
+    background: linear-gradient(135deg, #25D366, #128C7E);
+    color: white;
+    border-radius: 12px;
     height: 50px;
     width: 100%;
     font-size: 18px;
     font-weight: bold;
+    border: none;
 }
+
+/* INPUT BOX */
+input, textarea {
+    border-radius: 10px !important;
+}
+
+/* HEADINGS */
+h1 {
+    font-weight: 800;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
 # ================= HEADER =================
-st.title("🏥 DURGA PSYCHIATRIC CENTRE")
+st.markdown("<h1 style='text-align:center;'>🏥 DURGA PSYCHIATRIC CENTRE</h1>", unsafe_allow_html=True)
 
 # ================= PROFILE =================
+st.markdown('<div class="main-card">', unsafe_allow_html=True)
+
 col1, col2 = st.columns([1,2])
 
 with col1:
-    st.image("uploaded_image.jpg", width=150)
+    st.image("uploaded_image.jpg", width=140)
 
 with col2:
     st.markdown("""
-    ### 👩‍⚕️ D. DURGA  
-    **DPN (Nursing), DAHM, BBA, MBA (HR), MSW (Medical & Psychiatry)**  
-
-    **Founder & CEO**  
+    <div class="profile-card">
+    <h3>👩‍⚕️ D. DURGA</h3>
+    <b>DPN (Nursing), DAHM, BBA, MBA (HR), MSW</b><br><br>
+    Founder & CEO<br>
     Durga Psychiatric Centre
-    """)
+    </div>
+    """, unsafe_allow_html=True)
 
-st.markdown("---")
+st.markdown('</div>', unsafe_allow_html=True)
 
-# ================= AI SECTION =================
+# ================= AI =================
+st.markdown('<div class="main-card">', unsafe_allow_html=True)
+
 st.subheader("🧠 AI Mental Health Assistant")
 
 if "messages" not in st.session_state:
@@ -69,18 +101,18 @@ def offline_ai(text):
     text = text.lower()
 
     if "stress" in text:
-        return "Break your workload into smaller steps. Take short mindful breaks."
+        return "Break work into small steps. Take mindful pauses."
 
     if "sleep" in text:
-        return "Reduce screen time before bed. Practice slow breathing."
+        return "Reduce screen time and practice breathing before sleep."
 
     if "anxiety" in text:
-        return "Focus on breathing and grounding techniques."
+        return "Try grounding techniques and slow breathing."
 
     if "anger" in text:
-        return "Pause before reacting. Deep breathing helps control anger."
+        return "Pause. Take deep breaths before reacting."
 
-    return "I'm here to support you. Tell me more."
+    return "I'm here to support you."
 
 
 def call_gemini(prompt):
@@ -111,18 +143,16 @@ def call_gemini(prompt):
 
 
 def smart_ai(user_input):
-
     if not st.session_state.quota_exceeded:
         with st.spinner("Thinking..."):
             response = call_gemini(user_input)
-
         if response:
             return response
 
     return offline_ai(user_input)
 
 
-# ================= CHAT INPUT =================
+# ================= CHAT =================
 with st.form("chat_form", clear_on_submit=True):
 
     user_input = st.text_area("Tell me what you're feeling:")
@@ -135,59 +165,52 @@ with st.form("chat_form", clear_on_submit=True):
         st.session_state.messages.append(("Assistant", reply))
 
 
-# ================= DISPLAY =================
 for role, msg in st.session_state.messages:
     st.write(f"**{role}:** {msg}")
 
-# ================= CONSULTATION =================
-st.markdown("---")
-st.subheader("📞 Book a Consultation")
+st.markdown('</div>', unsafe_allow_html=True)
+
+# ================= CONSULT =================
+st.markdown('<div class="main-card">', unsafe_allow_html=True)
+
+st.subheader("📞 Book Consultation")
 
 name = st.text_input("Name")
 phone = st.text_input("Phone Number")
 
 cause = st.selectbox(
-    "Select Your Concern",
-    ["Stress", "Anxiety", "Depression", "Sleep Issue", "Relationship Issue", "Other"]
+    "Select Concern",
+    ["Stress", "Anxiety", "Depression", "Sleep Issue", "Relationship", "Other"]
 )
 
-# ================= SUBMIT =================
 if st.button("Submit & Continue"):
 
     if name and phone:
 
-        message = f"""Hello,
-I want to book a consultation.
-
+        msg = f"""Hello,
 Name: {name}
 Phone: {phone}
 Concern: {cause}
 """
 
-        link = f"https://wa.me/{WHATSAPP_NUMBER}?text={urllib.parse.quote(message)}"
+        link = f"https://wa.me/{WHATSAPP_NUMBER}?text={urllib.parse.quote(msg)}"
 
-        # AUTO OPEN WHATSAPP
         st.markdown(
-            f"""
-            <script>
-            window.open("{link}", "_blank");
-            </script>
-            """,
+            f'<script>window.open("{link}","_blank");</script>',
             unsafe_allow_html=True
         )
 
         st.success("Opening WhatsApp...")
 
-        # BACKUP BUTTON
         st.markdown(
             f"""
             <a href="{link}" target="_blank">
                 <button style="
-                    background:#25D366;
+                    background:linear-gradient(135deg,#25D366,#128C7E);
                     color:white;
                     padding:16px;
                     border:none;
-                    border-radius:10px;
+                    border-radius:12px;
                     font-size:18px;
                     width:100%;
                 ">
@@ -199,4 +222,6 @@ Concern: {cause}
         )
 
     else:
-        st.error("Please fill all fields")
+        st.error("Fill all fields")
+
+st.markdown('</div>', unsafe_allow_html=True)
