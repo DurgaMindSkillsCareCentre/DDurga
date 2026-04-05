@@ -8,7 +8,7 @@ import urllib.parse
 st.set_page_config(page_title="Durga AI", layout="centered")
 
 # =========================
-# GRADIENT UI (SAFE)
+# SAFE GRADIENT UI
 # =========================
 st.markdown("""
 <style>
@@ -24,11 +24,10 @@ textarea, input {
 }
 
 .stButton>button {
-    background: linear-gradient(135deg, #000000, #434343);
+    background: #000000;
     color: white;
-    border-radius: 12px;
+    border-radius: 10px;
     font-weight: bold;
-    padding: 10px 20px;
 }
 
 h1, h2, h3 {
@@ -40,7 +39,7 @@ h1, h2, h3 {
 # =========================
 # HEADER
 # =========================
-st.title(" DURGA PSYCHIATRIC CENTRE")
+st.title("DURGA PSYCHIATRIC CENTRE")
 
 # =========================
 # PROFILE
@@ -51,10 +50,10 @@ except:
     st.warning("Upload profile.jpg")
 
 st.markdown("""
-**D.Durga**  
-DPN (Nursing), DAHM, BBA, MBA(HR), MSW (Medical & Psychiatry)  
+D.Durga  
+DPN Nursing, DAHM, BBA, MBA HR, MSW Medical Psychiatry  
 
-**Founder & CEO**  
+Founder and CEO  
 Durga Psychiatric Centre
 """)
 
@@ -64,16 +63,16 @@ st.divider()
 # AI FUNCTIONS
 # =========================
 def local_ai(q):
-    return "Slow down. Breathe gently. Take one small step—you are safe."
+    return "Slow down. Breathe gently. Take one step at a time."
 
 def gemini_ai(q):
     key = st.secrets.get("GEMINI_API_KEY", "")
     if not key:
         return None
     try:
-        url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={key}"
+        url = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=" + key
         data = {"contents":[{"parts":[{"text":q}]}]}
-        r = requests.post(url, json=data, timeout=6)
+        r = requests.post(url, json=data, timeout=5)
         return r.json()["candidates"][0]["content"]["parts"][0]["text"]
     except:
         return None
@@ -84,12 +83,12 @@ def deepseek_ai(q):
         return None
     try:
         url = "https://api.deepseek.com/v1/chat/completions"
-        headers = {"Authorization": f"Bearer {key}"}
+        headers = {"Authorization": "Bearer " + key}
         data = {
             "model": "deepseek-chat",
             "messages":[{"role":"user","content":q}]
         }
-        r = requests.post(url, json=data, headers=headers, timeout=6)
+        r = requests.post(url, json=data, headers=headers, timeout=5)
         return r.json()["choices"][0]["message"]["content"]
     except:
         return None
@@ -123,7 +122,7 @@ def smart_ai(q):
     return local_ai(q)
 
 # =========================
-# SESSION STATE INIT
+# SESSION STATE
 # =========================
 if "history" not in st.session_state:
     st.session_state.history = []
@@ -136,10 +135,7 @@ if "input_text" not in st.session_state:
 # =========================
 st.subheader("AI Mental Health Assistant")
 
-user_input = st.text_area(
-    "Tell me what you're feeling:",
-    key="input_text"
-)
+user_input = st.text_area("Tell me what you are feeling", key="input_text")
 
 if st.button("SEND"):
     if user_input.strip():
@@ -149,9 +145,7 @@ if st.button("SEND"):
         st.session_state.history.append(("You", user_input))
         st.session_state.history.append(("AI", answer))
 
-        #  CLEAR INPUT (CORRECT WAY)
         st.session_state.input_text = ""
-
         st.rerun()
 
 # =========================
@@ -159,15 +153,15 @@ if st.button("SEND"):
 # =========================
 for role, msg in st.session_state.history:
     if role == "You":
-        st.markdown(f"**You:** {msg}")
+        st.write("You:", msg)
     else:
-        st.markdown(f"**AI:** {msg}")
+        st.write("AI:", msg)
 
 # =========================
 # CONSULT FORM
 # =========================
 st.divider()
-st.subheader(" Book Consultation")
+st.subheader("Book Consultation")
 
 name = st.text_input("Name")
 phone = st.text_input("Mobile Number")
@@ -179,12 +173,12 @@ concern = st.selectbox(
 if st.button("Submit"):
     if name and phone:
         message = urllib.parse.quote(
-            f"Name: {name}\nPhone: {phone}\nConcern: {concern}"
+            "Name: " + name + "\nPhone: " + phone + "\nConcern: " + concern
         )
 
-        whatsapp_url = f"https://wa.me/917395944527?text={message}"
+        whatsapp_url = "https://wa.me/917395944527?text=" + message
 
         st.success("Click below to open WhatsApp")
-        st.markdown(f"[ Open WhatsApp]({whatsapp_url})")
+        st.markdown("[Open WhatsApp](" + whatsapp_url + ")")
     else:
         st.warning("Please fill all details")
