@@ -1,221 +1,206 @@
 import streamlit as st
 import requests
-import urllib.parse
-from PIL import Image
 import time
+import urllib.parse
 
-# ================= CONFIG =================
+# =========================
+# 🔐 API KEYS (Streamlit Secrets)
+# =========================
 GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 DEEPSEEK_API_KEY = st.secrets.get("DEEPSEEK_API_KEY", "")
-WHATSAPP_NUMBER = "917395944527"
 
-st.set_page_config(page_title="Durga Psychiatric Centre", layout="centered")
-
-# ================= UI (SAFE PREMIUM) =================
+# =========================
+# 🎨 PREMIUM UI (iPhone Style)
+# =========================
 st.markdown("""
 <style>
+body {
+    background: linear-gradient(135deg, #4e54c8, #8f94fb);
+}
 .stApp {
-    background: linear-gradient(to bottom, #5f9cff, #7b2ff7);
+    background: linear-gradient(135deg, #4e54c8, #8f94fb);
+    color: white;
 }
-h1,h2,h3,p,label {
-    color: white !important;
-}
-textarea,input,select {
-    background: white !important;
-    color: black !important;
+textarea, input, select {
+    background-color: #ffffff !important;
+    color: #000000 !important;
     border-radius: 10px !important;
 }
-div.stButton > button {
-    background: linear-gradient(135deg,#111,#333) !important;
+button {
+    background: linear-gradient(135deg, #000000, #333333) !important;
     color: white !important;
-    border-radius: 12px;
-    height: 48px;
-    font-weight: bold;
+    border-radius: 12px !important;
+    font-weight: bold !important;
 }
-.badge {
-    padding:4px 10px;
-    border-radius:8px;
-    font-size:12px;
-    font-weight:bold;
+.whatsapp-btn {
+    background: linear-gradient(135deg, #0f9d58, #25D366);
+    color: white;
+    padding: 14px;
+    border-radius: 12px;
+    text-align: center;
+    font-weight: bold;
+    margin-top: 10px;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ================= HEADER =================
-st.title("🏥 DURGA PSYCHIATRIC CENTRE")
+# =========================
+# 👩 PROFILE SECTION
+# =========================
+try:
+    st.image("profile.jpg", width=150)
+except:
+    st.warning("Upload profile.jpg in your repo")
 
-# ================= PROFILE =================
-col1, col2 = st.columns([1,2])
-with col1:
-    try:
-        img = Image.open("profile.jpg")
-        st.image(img, width=120)
-    except:
-        st.warning("Upload profile.jpg")
+st.markdown("""
+### **D. Durga**
+DPN (Nursing), DAHM, BBA, MBA(HR), MSW (Medical & Psychiatry)  
+**Founder & CEO – Durga Psychiatric Centre**
+""")
 
-with col2:
-    st.markdown("""
-    **D. Durga**  
-    DPN (Nursing), DAHM, BBA, MBA(HR), MSW  
+st.markdown("---")
 
-    **Founder & CEO**  
-    Durga Psychiatric Centre
-    """)
+# =========================
+# 🧠 HEADER
+# =========================
+st.title("🧠 AI Mental Health Assistant")
 
-st.divider()
+# =========================
+# 🤖 LOCAL AI (Instant)
+# =========================
+def local_ai(prompt):
+    prompt = prompt.lower()
+    if "anxiety" in prompt:
+        return "Anxiety is your brain's alarm system becoming overactive. It tries to protect you but reacts too strongly."
+    if "sleep" in prompt:
+        return "Sleep issues often come from stress hormones staying high. Relax your body before bed."
+    return "Take slow breaths, relax your body, and focus on one small step."
 
-# ================= SESSION =================
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-if "ai_status" not in st.session_state:
-    st.session_state.ai_status = "Local"
-
-if "quota_exceeded" not in st.session_state:
-    st.session_state.quota_exceeded = False
-
-# ================= LOCAL AI =================
-def local_ai(text):
-    return "Try grounding, slow breathing, and reducing overload step by step.", "Local"
-
-# ================= GEMINI =================
+# =========================
+# 🌐 GEMINI API
+# =========================
 def gemini(prompt):
     if not GEMINI_API_KEY:
         return None, None
-
     try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
 
-        r = requests.post(url, json={
-            "contents":[{"parts":[{"text":prompt}]}]
-        }, timeout=5)
+        res = requests.post(url, json={
+            "contents": [{"parts": [{"text": prompt}]}]
+        }, timeout=6)
 
-        if r.status_code == 200:
-            return r.json()["candidates"][0]["content"]["parts"][0]["text"], "Gemini"
+        if res.status_code != 200:
+            st.warning(f"Gemini Error {res.status_code}")
+            return None, None
 
-        elif r.status_code == 429:
-            st.session_state.quota_exceeded = True
+        data = res.json()
+        return data["candidates"][0]["content"]["parts"][0]["text"], "Gemini"
 
-    except:
-        pass
+    except Exception as e:
+        st.warning(f"Gemini failed: {e}")
+        return None, None
 
-    return None, None
-
-# ================= DEEPSEEK =================
+# =========================
+# 🔥 DEEPSEEK API (FIXED)
+# =========================
 def deepseek(prompt):
     if not DEEPSEEK_API_KEY:
         return None, None
 
     try:
-        r = requests.post(
+        res = requests.post(
             "https://api.deepseek.com/v1/chat/completions",
             headers={
                 "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
                 "Content-Type": "application/json"
             },
             json={
-                "model":"deepseek-chat",
-                "messages":[{"role":"user","content":prompt}]
+                "model": "deepseek-chat",
+                "messages": [
+                    {"role": "system", "content": "You are a helpful mental health assistant."},
+                    {"role": "user", "content": prompt}
+                ],
+                "temperature": 0.7,
+                "max_tokens": 500
             },
-            timeout=6
+            timeout=8
         )
 
-        if r.status_code == 200:
-            return r.json()["choices"][0]["message"]["content"], "DeepSeek"
+        if res.status_code != 200:
+            st.error(f"DeepSeek Error {res.status_code}")
+            st.code(res.text)
+            return None, None
 
-        else:
-            st.warning("DeepSeek error")
+        data = res.json()
+        return data["choices"][0]["message"]["content"], "DeepSeek"
 
-    except:
-        pass
+    except Exception as e:
+        st.error(f"DeepSeek Exception: {e}")
+        return None, None
 
-    return None, None
+# =========================
+# 🧠 SMART ROUTER
+# =========================
+def smart_ai(prompt):
+    # Try Gemini first
+    response, source = gemini(prompt)
+    if response:
+        return response, source
 
-# ================= SMART ROUTER =================
-def get_ai(user):
+    # Then DeepSeek
+    response, source = deepseek(prompt)
+    if response:
+        return response, source
 
-    # Try Gemini
-    if not st.session_state.quota_exceeded:
-        with st.spinner("Thinking..."):
-            r, src = gemini(user)
-        if r:
-            st.session_state.ai_status = "Gemini"
-            return r, src
+    # Finally local
+    return local_ai(prompt), "Local AI"
 
-    # Try DeepSeek
-    r, src = deepseek(user)
-    if r:
-        st.session_state.ai_status = "DeepSeek"
-        return r, src
-
-    # Fallback
-    st.session_state.ai_status = "Local"
-    return local_ai(user)
-
-# ================= STATUS BADGE =================
-status = st.session_state.ai_status
-
-color = {
-    "Gemini":"#00c853",
-    "DeepSeek":"#ff9800",
-    "Local":"#9e9e9e"
-}
-
-st.markdown(f"""
-<span class="badge" style="background:{color.get(status)}">
-AI: {status}
-</span>
-""", unsafe_allow_html=True)
-
-# ================= CHAT =================
-st.subheader("🧠 AI Mental Health Assistant")
-
-user_input = st.text_area("Tell me what you're feeling")
+# =========================
+# 💬 CHAT UI
+# =========================
+user_input = st.text_area("Tell me what you're feeling:")
 
 if st.button("SEND"):
-    if user_input.strip():
-        reply, src = get_ai(user_input)
+    if user_input:
+        response, source = smart_ai(user_input)
 
-        st.session_state.messages.append(("You", user_input))
-        st.session_state.messages.append((f"AI ({src})", reply))
+        st.markdown(f"**You:** {user_input}")
+        st.markdown(f"**AI ({source}):** {response}")
 
-# ================= DISPLAY =================
-for role, msg in st.session_state.messages:
-    st.markdown(f"**{role}:** {msg}")
-
-# ================= CONSULT =================
-st.divider()
+# =========================
+# 📞 CONSULTATION FORM
+# =========================
+st.markdown("---")
 st.subheader("📞 Book Consultation")
 
 name = st.text_input("Name")
 phone = st.text_input("Phone Number")
-
-issue = st.selectbox("Concern",
-    ["Stress","Anxiety","Depression","Sleep Issues","Relationship","Other"]
-)
+concern = st.selectbox("Select Concern", ["Stress", "Anxiety", "Depression", "Sleep Issue"])
 
 if st.button("Submit & Continue"):
-
     if name and phone:
-        msg = f"Name: {name}\nPhone: {phone}\nIssue: {issue}"
-        link = f"https://wa.me/{WHATSAPP_NUMBER}?text={urllib.parse.quote(msg)}"
+        message = f"""
+Hello, I am {name}.
+Concern: {concern}
+Phone: {phone}
+"""
 
-        st.success("Click below to open WhatsApp")
+        encoded = urllib.parse.quote(message)
+        whatsapp_url = f"https://wa.me/917395944527?text={encoded}"
 
+        # AUTO OPEN WHATSAPP
         st.markdown(f"""
-        <a href="{link}" target="_blank">
-        <div style="
-            background: linear-gradient(135deg,#075e54,#25D366);
-            color:white;
-            padding:16px;
-            text-align:center;
-            border-radius:12px;
-            font-weight:bold;
-            font-size:18px;">
-            💬 OPEN WHATSAPP
-        </div>
+        <meta http-equiv="refresh" content="1;url={whatsapp_url}">
+        """, unsafe_allow_html=True)
+
+        st.success("Opening WhatsApp...")
+
+        # BUTTON
+        st.markdown(f"""
+        <a href="{whatsapp_url}" target="_blank">
+            <div class="whatsapp-btn">💬 Open WhatsApp</div>
         </a>
         """, unsafe_allow_html=True)
 
     else:
-        st.error("Fill all details")
+        st.warning("Please fill all fields")
