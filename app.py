@@ -1,7 +1,6 @@
 import streamlit as st
 import requests
 import urllib.parse
-from bs4 import BeautifulSoup
 
 # =========================
 # 🔐 API KEYS
@@ -10,7 +9,7 @@ GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 DEEPSEEK_API_KEY = st.secrets.get("DEEPSEEK_API_KEY", "")
 
 # =========================
-# 🎨 PREMIUM UI
+# 🎨 UI
 # =========================
 st.markdown("""
 <style>
@@ -69,19 +68,20 @@ st.markdown("---")
 def local_ai(prompt):
     p = prompt.lower()
     if "anxiety" in p:
-        return "Anxiety is caused by overactivation of the brain’s fear center (amygdala) and stress hormones."
+        return "Anxiety is caused by overactivation of the amygdala and stress hormones."
     if "sleep" in p:
-        return "Sleep problems occur due to high stress, overthinking, and irregular sleep cycles."
-    return "Relax your body, slow your breathing, and take one step at a time."
+        return "Sleep problems occur due to stress, overthinking, and irregular cycles."
+    return "Relax, breathe slowly, and focus on one step at a time."
 
 # =========================
-# 🌐 GEMINI
+# 🌐 GEMINI (FIXED)
 # =========================
 def gemini(prompt):
     if not GEMINI_API_KEY:
         return None
     try:
         url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+
         res = requests.post(url, json={
             "contents": [{"parts": [{"text": prompt}]}]
         }, timeout=5)
@@ -121,16 +121,18 @@ def deepseek(prompt):
         return None
 
 # =========================
-# 🌍 WEB SEARCH (MULTI SOURCE)
+# 🌍 WEB AI (NO BS4)
 # =========================
-def web_search_ai(query):
+def web_ai(prompt):
     results = []
 
-    # 1️⃣ DuckDuckGo
+    # DuckDuckGo
     try:
-        url = "https://api.duckduckgo.com/"
-        params = {"q": query, "format": "json"}
-        res = requests.get(url, params=params, timeout=4).json()
+        res = requests.get(
+            "https://api.duckduckgo.com/",
+            params={"q": prompt, "format": "json"},
+            timeout=4
+        ).json()
 
         if res.get("AbstractText"):
             results.append(res["AbstractText"])
@@ -142,23 +144,15 @@ def web_search_ai(query):
     except:
         pass
 
-    # 2️⃣ Wikipedia
+    # Wikipedia
     try:
-        wiki_url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{query}"
-        res = requests.get(wiki_url, timeout=4).json()
+        res = requests.get(
+            f"https://en.wikipedia.org/api/rest_v1/page/summary/{prompt}",
+            timeout=4
+        ).json()
+
         if res.get("extract"):
             results.append(res["extract"])
-    except:
-        pass
-
-    # 3️⃣ Basic scraping (fallback)
-    try:
-        search_url = f"https://duckduckgo.com/html/?q={query}"
-        html = requests.get(search_url, timeout=4).text
-        soup = BeautifulSoup(html, "html.parser")
-        snippets = soup.find_all("a", class_="result__a", limit=2)
-        for s in snippets:
-            results.append(s.text)
     except:
         pass
 
@@ -172,15 +166,11 @@ def summarize(texts):
         return None
 
     combined = " ".join(texts)
-
-    # simple compression logic
     sentences = combined.split(".")
-    summary = ". ".join(sentences[:3])
-
-    return summary.strip() + "."
+    return ". ".join(sentences[:3]) + "."
 
 # =========================
-# 🧠 SMART ROUTER V5
+# 🧠 SMART ROUTER
 # =========================
 def smart_ai(prompt):
 
@@ -192,7 +182,7 @@ def smart_ai(prompt):
     if d:
         return d, "DeepSeek"
 
-    w = web_search_ai(prompt)
+    w = web_ai(prompt)
     if w:
         return w, "Web AI"
 
@@ -225,6 +215,7 @@ if st.button("Submit & Continue"):
 
         msg = f"Hello, I am {name}. Concern: {concern}. Phone: {phone}"
         encoded = urllib.parse.quote(msg)
+
         url = f"https://wa.me/917395944527?text={encoded}"
 
         st.markdown(f'<meta http-equiv="refresh" content="1;url={url}">', unsafe_allow_html=True)
