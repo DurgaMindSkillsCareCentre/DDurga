@@ -1,42 +1,87 @@
 import streamlit as st
 import requests
 import urllib.parse
-import random
 
 # ================= CONFIG =================
 API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 MODEL = "models/gemini-2.0-flash"
 WHATSAPP_NUMBER = "917395944527"
 
-st.set_page_config(page_title="Durga Psychiatric Centre")
+st.set_page_config(page_title="Durga Psychiatric Centre", layout="centered")
 
+# ================= CUSTOM STYLE =================
+st.markdown("""
+<style>
+body {
+    background-color: #f5f7fb;
+}
+.main {
+    background-color: #ffffff;
+    padding: 15px;
+    border-radius: 12px;
+}
+h1, h2, h3 {
+    color: #2c3e50;
+}
+.stButton button {
+    background-color: #25D366;
+    color: white;
+    border-radius: 8px;
+    height: 50px;
+    width: 100%;
+    font-size: 18px;
+    font-weight: bold;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ================= HEADER =================
 st.title("🏥 DURGA PSYCHIATRIC CENTRE")
+
+# ================= PROFILE =================
+col1, col2 = st.columns([1,2])
+
+with col1:
+    st.image("uploaded_image.jpg", width=150)
+
+with col2:
+    st.markdown("""
+    ### 👩‍⚕️ D. DURGA  
+    **DPN (Nursing), DAHM, BBA, MBA (HR), MSW (Medical & Psychiatry)**  
+
+    **Founder & CEO**  
+    Durga Psychiatric Centre
+    """)
+
+st.markdown("---")
+
+# ================= AI SECTION =================
 st.subheader("🧠 AI Mental Health Assistant")
 
-# ================= SESSION =================
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
 if "quota_exceeded" not in st.session_state:
     st.session_state.quota_exceeded = False
 
-# ================= AI =================
+
 def offline_ai(text):
     text = text.lower()
 
     if "stress" in text:
-        return "Break tasks into smaller steps. You don’t need to do everything at once."
+        return "Break your workload into smaller steps. Take short mindful breaks."
 
     if "sleep" in text:
-        return "Reduce screen time and practice slow breathing before sleep."
+        return "Reduce screen time before bed. Practice slow breathing."
 
     if "anxiety" in text:
-        return "Focus on the present moment. Try grounding techniques."
+        return "Focus on breathing and grounding techniques."
 
     if "anger" in text:
-        return "Pause and take a deep breath before reacting."
+        return "Pause before reacting. Deep breathing helps control anger."
 
     return "I'm here to support you. Tell me more."
+
 
 def call_gemini(prompt):
     if not API_KEY:
@@ -64,6 +109,7 @@ def call_gemini(prompt):
     except:
         return None
 
+
 def smart_ai(user_input):
 
     if not st.session_state.quota_exceeded:
@@ -75,7 +121,8 @@ def smart_ai(user_input):
 
     return offline_ai(user_input)
 
-# ================= CHAT =================
+
+# ================= CHAT INPUT =================
 with st.form("chat_form", clear_on_submit=True):
 
     user_input = st.text_area("Tell me what you're feeling:")
@@ -86,6 +133,7 @@ with st.form("chat_form", clear_on_submit=True):
         st.session_state.messages.append(("You", user_input))
         reply = smart_ai(user_input)
         st.session_state.messages.append(("Assistant", reply))
+
 
 # ================= DISPLAY =================
 for role, msg in st.session_state.messages:
@@ -103,7 +151,7 @@ cause = st.selectbox(
     ["Stress", "Anxiety", "Depression", "Sleep Issue", "Relationship Issue", "Other"]
 )
 
-# ================= SUBMIT BUTTON =================
+# ================= SUBMIT =================
 if st.button("Submit & Continue"):
 
     if name and phone:
@@ -118,7 +166,7 @@ Concern: {cause}
 
         link = f"https://wa.me/{WHATSAPP_NUMBER}?text={urllib.parse.quote(message)}"
 
-        # 🔥 AUTO OPEN WHATSAPP
+        # AUTO OPEN WHATSAPP
         st.markdown(
             f"""
             <script>
@@ -130,7 +178,7 @@ Concern: {cause}
 
         st.success("Opening WhatsApp...")
 
-        # ✅ BACKUP BUTTON
+        # BACKUP BUTTON
         st.markdown(
             f"""
             <a href="{link}" target="_blank">
@@ -142,9 +190,8 @@ Concern: {cause}
                     border-radius:10px;
                     font-size:18px;
                     width:100%;
-                    font-weight:bold;
                 ">
-                💬 Click here if WhatsApp did not open
+                💬 Open WhatsApp
                 </button>
             </a>
             """,
