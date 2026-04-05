@@ -2,15 +2,14 @@ import streamlit as st
 import requests
 import urllib.parse
 import time
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 # ================= CONFIG =================
-API_KEY = st.secrets["GEMINI_API_KEY"]
+API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 WHATSAPP_NUMBER = "917395944527"
 
-# ⚡ FAST FIRST MODEL (VERY IMPORTANT)
 PRIMARY_MODEL = "models/gemini-2.0-flash"
-
-# 🔁 FALLBACK MODELS (ONLY IF FAIL)
 FALLBACK_MODELS = [
     "models/gemini-2.0-flash-001",
     "models/gemini-flash-latest",
@@ -23,66 +22,101 @@ st.set_page_config(page_title="Durga Psychiatric Centre", layout="centered")
 st.markdown("# 🏥 DURGA PSYCHIATRIC CENTRE")
 st.markdown("## 🧠 AI Mental Health Assistant")
 
-# ================= SESSION =================
+# ================= SAFE SESSION =================
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# ================= AI FUNCTION (FAST) =================
+# ================= HTTP SESSION WITH RETRY =================
+def build_session():
+    session = requests.Session()
+    retries = Retry(
+        total=2,                # small retry to avoid delays
+        backoff_factor=0.5,     # quick retry
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["POST"]
+    )
+    adapter = HTTPAdapter(max_retries=retries)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session
+
+HTTP = build_session()
+
+# ================= CORE CALL =================
 def call_model(model, prompt):
+    if not API_KEY:
+        return None
+
     url = f"https://generativelanguage.googleapis.com/v1beta/{model}:generateContent?key={API_KEY}"
 
     payload = {
         "contents": [
             {
                 "parts": [
-                    {
-                        "text": f"You are a calm psychologist. Give short helpful advice.\nUser: {prompt}"
-                    }
+                    {"text": f"You are a calm psychologist. Give short helpful advice.\nUser: {prompt}"}
                 ]
             }
         ]
     }
 
-    res = requests.post(url, json=payload, timeout=6)
+    try:
+        # 🔥 split timeout (connect, read)
+        res = HTTP.post(url, json=payload, timeout=(3, 10))
 
-    if res.status_code == 200:
+        if res.status_code != 200:
+            return None
+
         data = res.json()
-        return data["candidates"][0]["content"]["parts"][0]["text"]
+
+        # 🛡️ SAFE PARSING
+        if "candidates" in data:
+            return data["candidates"][0]["content"]["parts"][0]["text"]
+
+    except Exception:
+        return None
 
     return None
 
 
+# ================= AI ENGINE =================
 def ask_ai(prompt):
 
-    # ⚡ STEP 1: FAST MODEL FIRST
+    # ⚡ primary (fast)
     result = call_model(PRIMARY_MODEL, prompt)
     if result:
         return result
 
-    # 🔁 STEP 2: FALLBACK ONLY IF NEEDED
+    # 🔁 quick retry same model
+    result = call_model(PRIMARY_MODEL, prompt)
+    if result:
+        return result
+
+    # 🔁 fallback models
     for model in FALLBACK_MODELS:
         result = call_model(model, prompt)
         if result:
             return result
 
-    return "⚠️ AI busy. Please try again in a few seconds."
+    return "⚠️ AI is busy right now. Please try again in a few seconds."
 
 
-# ================= CHAT (FIXED UX) =================
-with st.form(key="chat_form", clear_on_submit=True):
-
+# ================= CHAT =================
+with st.form("chat_form", clear_on_submit=True):
     user_input = st.text_area(
         "Tell me what you're feeling:",
         placeholder="Example: I feel stressed due to work pressure"
     )
 
-    submitted = st.form_submit_button("Send")
+    send = st.form_submit_button("Send")
 
-    if submitted and user_input.strip():
-
+    if send and user_input.strip():
         st.session_state.messages.append(("You", user_input))
 
-        reply = ask_ai(user_input)
+        try:
+            with st.spinner("Thinking..."):
+                reply = ask_ai(user_input)
+        except Exception:
+            reply = "⚠️ Temporary issue. Please try again."
 
         st.session_state.messages.append(("Assistant", reply))
 
@@ -103,9 +137,8 @@ concern = st.selectbox(
     ["Stress", "Anxiety", "Depression", "Relationship Issue", "Addiction", "Other"]
 )
 
-# ================= WHATSAPP MESSAGE =================
+# ================= WHATSAPP =================
 if name and phone:
-
     message = f"""Hello Durga Psychiatric Centre,
 
 New Consultation Request:
@@ -117,19 +150,20 @@ Concern: {concern}
 Please contact me."""
 
     encoded = urllib.parse.quote(message)
-    url = f"https://wa.me/{WHATSAPP_NUMBER}?text={encoded}"
+    link = f"https://wa.me/{WHATSAPP_NUMBER}?text={encoded}"
 
     st.markdown(
         f"""
-        <a href="{url}" target="_blank">
+        <a href="{link}" target="_blank">
         <div style="
             background-color:#25D366;
             padding:16px;
-            border-radius:12px;
+            border-radius:10px;
             text-align:center;
             font-size:18px;
             font-weight:bold;
             color:white;
+            margin-top:10px;
         ">
         💬 Book via WhatsApp
         </div>
@@ -137,6 +171,5 @@ Please contact me."""
         """,
         unsafe_allow_html=True
     )
-
 else:
     st.info("Fill details to enable WhatsApp booking")
