@@ -9,7 +9,7 @@ GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 DEEPSEEK_API_KEY = st.secrets.get("DEEPSEEK_API_KEY", "")
 
 # =========================
-# 🎨 UI
+# 🎨 UI DESIGN
 # =========================
 st.markdown("""
 <style>
@@ -17,24 +17,16 @@ st.markdown("""
     background: linear-gradient(135deg, #4e54c8, #8f94fb);
     color: white;
 }
-textarea, input, select {
-    background-color: white !important;
+textarea, input {
+    background: white !important;
     color: black !important;
-    border-radius: 10px !important;
+    border-radius: 12px !important;
 }
 button {
     background: #111 !important;
     color: white !important;
     border-radius: 12px !important;
     font-weight: bold !important;
-}
-.whatsapp-btn {
-    background: #0f9d58;
-    color: white;
-    padding: 14px;
-    border-radius: 12px;
-    text-align: center;
-    font-weight: bold;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -46,35 +38,18 @@ st.title("🏥 DURGA PSYCHIATRIC CENTRE")
 st.subheader("🧠 AI Mental Health Assistant")
 
 # =========================
-# 👩 PROFILE
-# =========================
-try:
-    st.image("profile.jpg", width=140)
-except:
-    pass
-
-st.markdown("""
-**D. Durga**  
-DPN (Nursing), DAHM, BBA, MBA(HR), MSW  
-(Medical & Psychiatry)  
-Founder & CEO
-""")
-
-st.markdown("---")
-
-# =========================
-# 🧠 LOCAL AI
+# 🧠 LOCAL AI (LAST RESORT)
 # =========================
 def local_ai(prompt):
     p = prompt.lower()
+    if "mood swing" in p:
+        return "Mood swings are like your feelings changing quickly, like sunny to rainy."
     if "anxiety" in p:
-        return "Anxiety is caused by overactivation of the amygdala and stress hormones."
-    if "sleep" in p:
-        return "Sleep problems occur due to stress, overthinking, and irregular cycles."
-    return "Relax, breathe slowly, and focus on one step at a time."
+        return "Anxiety is when your brain feels too worried even when there is no danger."
+    return "Take a deep breath and relax your mind step by step."
 
 # =========================
-# 🌐 GEMINI (FIXED)
+# 🌐 GEMINI
 # =========================
 def gemini(prompt):
     if not GEMINI_API_KEY:
@@ -121,7 +96,7 @@ def deepseek(prompt):
         return None
 
 # =========================
-# 🌍 WEB AI (NO BS4)
+# 🌍 ADVANCED WEB AI
 # =========================
 def web_ai(prompt):
     results = []
@@ -137,10 +112,9 @@ def web_ai(prompt):
         if res.get("AbstractText"):
             results.append(res["AbstractText"])
 
-        for t in res.get("RelatedTopics", []):
-            if isinstance(t, dict) and t.get("Text"):
-                results.append(t["Text"])
-                break
+        for topic in res.get("RelatedTopics", [])[:5]:
+            if isinstance(topic, dict) and topic.get("Text"):
+                results.append(topic["Text"])
     except:
         pass
 
@@ -166,39 +140,57 @@ def summarize(texts):
         return None
 
     combined = " ".join(texts)
+
+    # Clean summary
     sentences = combined.split(".")
-    return ". ".join(sentences[:3]) + "."
+    summary = ". ".join(sentences[:4])
+
+    return summary.strip() + "."
 
 # =========================
 # 🧠 SMART ROUTER
 # =========================
 def smart_ai(prompt):
 
+    # 1️⃣ Gemini
     g = gemini(prompt)
     if g:
         return g, "Gemini"
 
+    # 2️⃣ DeepSeek
     d = deepseek(prompt)
     if d:
         return d, "DeepSeek"
 
+    # 3️⃣ Web AI (MAIN FALLBACK)
     w = web_ai(prompt)
     if w:
         return w, "Web AI"
 
+    # 4️⃣ Local AI (LAST)
     return local_ai(prompt), "Local AI"
 
 # =========================
-# 💬 CHAT
+# 💬 CHAT UI
 # =========================
-user_input = st.text_area("Tell me what you're feeling:")
+if "input_text" not in st.session_state:
+    st.session_state.input_text = ""
+
+user_input = st.text_area(
+    "Tell me what you're feeling:",
+    key="input_text"
+)
 
 if st.button("SEND"):
     if user_input.strip():
+
         response, source = smart_ai(user_input)
 
         st.markdown(f"**You:** {user_input}")
         st.markdown(f"**AI ({source}):** {response}")
+
+        # 🔥 CLEAR INPUT BOX
+        st.session_state.input_text = ""
 
 # =========================
 # 📞 CONSULTATION
@@ -208,11 +200,10 @@ st.subheader("📞 Book Consultation")
 
 name = st.text_input("Name")
 phone = st.text_input("Phone Number")
-concern = st.selectbox("Select Concern", ["Stress", "Anxiety", "Depression", "Sleep Issue"])
+concern = st.selectbox("Concern", ["Stress", "Anxiety", "Depression", "Sleep"])
 
 if st.button("Submit & Continue"):
     if name and phone:
-
         msg = f"Hello, I am {name}. Concern: {concern}. Phone: {phone}"
         encoded = urllib.parse.quote(msg)
 
@@ -221,11 +212,5 @@ if st.button("Submit & Continue"):
         st.markdown(f'<meta http-equiv="refresh" content="1;url={url}">', unsafe_allow_html=True)
         st.success("Opening WhatsApp...")
 
-        st.markdown(f"""
-        <a href="{url}" target="_blank">
-            <div class="whatsapp-btn">💬 Open WhatsApp</div>
-        </a>
-        """, unsafe_allow_html=True)
-
     else:
-        st.warning("Please fill all fields")
+        st.warning("Fill all fields")
