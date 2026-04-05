@@ -11,23 +11,35 @@ DEEPSEEK_API_KEY = st.secrets.get("DEEPSEEK_API_KEY", "")
 SERPER_API_KEY = st.secrets.get("SERPER_API_KEY", "")
 
 # =========================
-# 🎨 UI
+# 🎨 ULTRA PREMIUM UI
 # =========================
 st.set_page_config(page_title="Durga AI", layout="centered")
 
 st.markdown("""
 <style>
 body {
-    background: linear-gradient(135deg,#4e54c8,#8f94fb);
+    background: linear-gradient(135deg,#0f2027,#2c5364);
+    color:white;
 }
-.stButton button {
-    background:black !important;
+h1,h2,h3,h4,h5,p,label {
     color:white !important;
-    border-radius:12px;
-    font-weight:bold;
 }
 textarea {
     border-radius:12px !important;
+}
+.stButton button {
+    background:#000 !important;
+    color:#fff !important;
+    border-radius:12px;
+    padding:10px 20px;
+    font-weight:bold;
+}
+.chat-box {
+    background:#1e2a38;
+    padding:12px;
+    border-radius:12px;
+    margin-top:10px;
+    font-size:14px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -35,7 +47,7 @@ textarea {
 # =========================
 # 👩 PROFILE
 # =========================
-st.image("profile.jpg", width=180)
+st.image("profile.jpg", width=150)
 
 st.markdown("""
 ### D.Durga  
@@ -50,7 +62,7 @@ st.markdown("---")
 # 🧠 LOCAL AI
 # =========================
 def local_ai(q):
-    return "Take a deep breath. Break things into small steps. You are not alone."
+    return "Take a deep breath. Break your tasks into small steps. You are not alone."
 
 # =========================
 # 🤖 GEMINI
@@ -62,8 +74,7 @@ def gemini_ai(q):
         url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
         payload = {"contents":[{"parts":[{"text":q}]}]}
         r = requests.post(url, json=payload, timeout=5)
-        data = r.json()
-        return data["candidates"][0]["content"]["parts"][0]["text"]
+        return r.json()["candidates"][0]["content"]["parts"][0]["text"]
     except:
         return None
 
@@ -81,51 +92,52 @@ def deepseek_ai(q):
             "messages":[{"role":"user","content":q}]
         }
         r = requests.post(url, json=payload, headers=headers, timeout=5)
-        data = r.json()
-        return data["choices"][0]["message"]["content"]
+        return r.json()["choices"][0]["message"]["content"]
     except:
         return None
 
 # =========================
-# 🌐 SERPER SEARCH
+# 🌐 SERPER
 # =========================
-def serper_links(q):
+def search_link(q):
     if not SERPER_API_KEY:
-        return []
+        return None
     try:
         url = "https://google.serper.dev/search"
         headers = {"X-API-KEY": SERPER_API_KEY}
-        r = requests.post(url, json={"q": q}, headers=headers)
-        data = r.json()
-        return [i["link"] for i in data.get("organic", [])[:3]]
+        data = requests.post(url, json={"q":q}, headers=headers).json()
+        return data["organic"][0]["link"]
     except:
-        return []
+        return None
 
 # =========================
-# 🧹 CLEAN CONTENT
+# 🧹 CLEAN + FILTER
 # =========================
-def clean_text(html):
+def extract_clean_text(html):
     html = re.sub(r'<script.*?>.*?</script>', '', html, flags=re.S)
     html = re.sub(r'<style.*?>.*?</style>', '', html, flags=re.S)
 
     text = re.sub(r'<[^>]+>', ' ', html)
     text = re.sub(r'\s+', ' ', text)
 
-    blacklist = ["menu","login","privacy","terms","contact","about"]
+    blacklist = [
+        "menu","skip","search","privacy","terms",
+        "login","about","contact","nhs","home"
+    ]
 
     sentences = text.split(".")
-    good = []
+    clean = []
 
     for s in sentences:
         if len(s) > 40 and not any(b in s.lower() for b in blacklist):
-            good.append(s.strip())
+            clean.append(s.strip())
 
-    return good[:15]
+    return clean[:10]
 
 # =========================
-# 🧠 SMART SUMMARY (CORE FIX)
+# 🧠 SMART SUMMARY (STRICT 3 LINES)
 # =========================
-def smart_summary(sentences, query):
+def summarize(sentences, query):
     scored = []
 
     for s in sentences:
@@ -135,10 +147,7 @@ def smart_summary(sentences, query):
 
     scored.sort(reverse=True)
 
-    best = [s for _, s in scored[:4]]
-
-    if not best:
-        return None
+    best = [s for _, s in scored[:3]]
 
     return ". ".join(best) + "."
 
@@ -146,19 +155,16 @@ def smart_summary(sentences, query):
 # 🌐 WEB AI (FIXED)
 # =========================
 def web_ai(q):
-    links = serper_links(q)
+    link = search_link(q)
+    if not link:
+        return None
 
-    all_sentences = []
-
-    for link in links:
-        try:
-            html = requests.get(link, timeout=5).text
-            cleaned = clean_text(html)
-            all_sentences.extend(cleaned)
-        except:
-            continue
-
-    return smart_summary(all_sentences, q)
+    try:
+        html = requests.get(link, timeout=5).text
+        clean = extract_clean_text(html)
+        return summarize(clean, q)
+    except:
+        return None
 
 # =========================
 # 🧠 MASTER AI
@@ -167,39 +173,56 @@ def smart_ai(q):
 
     r = gemini_ai(q)
     if r:
-        return "Gemini: " + r[:500]
+        return r[:400]
 
     r = deepseek_ai(q)
     if r:
-        return "DeepSeek: " + r[:500]
+        return r[:400]
 
     r = web_ai(q)
     if r:
-        return "Web AI: " + r
+        return r
 
-    return "Local AI: " + local_ai(q)
+    return local_ai(q)
 
 # =========================
-# INPUT
+# 💬 CHAT
 # =========================
 user_input = st.text_area("Tell me what you're feeling:")
 
 if st.button("SEND"):
     if user_input.strip():
 
-        st.markdown(f"### You: {user_input}")
+        st.markdown(f'<div class="chat-box">You: {user_input}</div>', unsafe_allow_html=True)
 
-        answer = smart_ai(user_input)
+        ans = smart_ai(user_input)
 
-        st.markdown(f"### {answer}")
+        st.markdown(f'<div class="chat-box">AI: {ans}</div>', unsafe_allow_html=True)
 
-        # WhatsApp
-        msg = urllib.parse.quote(user_input)
-        wa = f"https://wa.me/917395944527?text={msg}"
+# =========================
+# 📞 CONSULT FORM
+# =========================
+st.markdown("---")
+st.markdown("## 📞 Book Consultation")
 
-        st.markdown(f"""
-<a href="{wa}" target="_blank">
-<button style="background:black;color:white;padding:10px;border-radius:10px;">
+name = st.text_input("Name")
+phone = st.text_input("Mobile")
+
+cause = st.selectbox("Select Concern",
+    ["Stress","Anxiety","Depression","Sleep Issues"]
+)
+
+if st.button("Submit"):
+
+    msg = urllib.parse.quote(
+        f"Name: {name}\nPhone: {phone}\nConcern: {cause}"
+    )
+
+    link = f"https://wa.me/917395944527?text={msg}"
+
+    st.markdown(f"""
+<a href="{link}" target="_blank">
+<button style="background:#000;color:#fff;padding:12px;border-radius:12px;">
 Open WhatsApp
 </button>
 </a>
