@@ -10,85 +10,56 @@ WHATSAPP_NUMBER = "917395944527"
 
 st.set_page_config(page_title="Durga Psychiatric Centre", layout="centered")
 
-# ================= PREMIUM UI =================
+# ================= SIMPLE PREMIUM UI =================
 st.markdown("""
 <style>
-
-/* Background */
-html, body, [class*="css"] {
-    background: linear-gradient(180deg,#5f9cff,#7b2ff7) !important;
-    color: white !important;
-    font-family: -apple-system, sans-serif;
+body {
+    background: linear-gradient(to bottom, #5f9cff, #7b2ff7);
 }
-
-/* Text */
-h1, h2, h3, label, p {
+.stApp {
+    background: linear-gradient(to bottom, #5f9cff, #7b2ff7);
+}
+h1, h2, h3, p, label {
     color: white !important;
 }
-
-/* Inputs */
 textarea, input, select {
     background: white !important;
     color: black !important;
-    border-radius: 12px !important;
-    padding: 12px !important;
+    border-radius: 10px !important;
 }
-
-/* SEND Button */
-button[kind="primary"] {
-    background: linear-gradient(135deg,#000000,#333333) !important;
+div.stButton > button {
+    background: #111 !important;
     color: white !important;
-    border-radius: 14px !important;
-    height: 50px !important;
-    font-size: 16px !important;
-    font-weight: bold !important;
+    border-radius: 10px;
+    height: 45px;
+    font-weight: bold;
 }
-
-/* Chat bubble */
-.chat {
-    background: rgba(255,255,255,0.15);
-    padding: 12px;
-    border-radius: 16px;
-    margin-bottom: 10px;
-}
-
-/* AI label */
-.ai {
-    color: gold;
-    font-size: 12px;
-}
-
-/* Profile card */
-.profile {
-    background: rgba(255,255,255,0.2);
-    padding: 16px;
-    border-radius: 18px;
-    margin-bottom: 15px;
-    text-align: center;
-}
-
 </style>
 """, unsafe_allow_html=True)
 
 # ================= HEADER =================
-st.markdown("## 🏥 DURGA PSYCHIATRIC CENTRE")
+st.title("🏥 DURGA PSYCHIATRIC CENTRE")
 
 # ================= PROFILE =================
-try:
-    img = Image.open("profile.jpg")
-    st.image(img, width=120)
-except:
-    st.warning("Upload profile.jpg in repo root")
+col1, col2 = st.columns([1,2])
 
-st.markdown("""
-<div class="profile">
-<b>D. Durga</b><br>
-DPN (Nursing), DAHM, BBA, MBA(HR), MSW (Medical & Psychiatry)<br><br>
+with col1:
+    try:
+        img = Image.open("profile.jpg")
+        st.image(img, width=130)
+    except:
+        st.warning("Upload profile.jpg")
 
-<b>Founder & CEO</b><br>
-Durga Psychiatric Centre
-</div>
-""", unsafe_allow_html=True)
+with col2:
+    st.markdown("""
+    **D. Durga**  
+    DPN (Nursing), DAHM, BBA, MBA(HR), MSW  
+
+    **Founder & CEO**  
+    Durga Psychiatric Centre
+    """)
+
+st.divider()
 
 # ================= SESSION =================
 if "messages" not in st.session_state:
@@ -102,24 +73,24 @@ def local_ai(text):
     t = text.lower()
 
     if "stress" in t:
-        return "Take small steps. Focus on breathing and relaxation.", "Local AI"
+        return "Take small steps and practice slow breathing.", "Local AI"
 
     if "sleep" in t:
-        return "Avoid screens before bed. Try deep breathing and calm music.", "Local AI"
+        return "Reduce screen time and relax your mind before bed.", "Local AI"
 
     if "anxiety" in t:
-        return "Anxiety happens when the brain senses danger. Practice grounding.", "Local AI"
+        return "Anxiety is your brain reacting to stress. Stay grounded.", "Local AI"
 
-    return "I'm here to support you. Tell me more.", "Local AI"
+    return "I'm here to support you.", "Local AI"
 
 # ================= GEMINI =================
 def gemini(prompt):
     if not GEMINI_API_KEY:
         return None, None
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
-
     try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+
         res = requests.post(url, json={
             "contents":[{"parts":[{"text":prompt}]}]
         }, timeout=5)
@@ -149,10 +120,7 @@ def deepseek(prompt):
             },
             json={
                 "model": "deepseek-chat",
-                "messages": [
-                    {"role": "system", "content": "You are a helpful mental health assistant."},
-                    {"role": "user", "content": prompt}
-                ]
+                "messages":[{"role":"user","content":prompt}]
             },
             timeout=6
         )
@@ -166,59 +134,47 @@ def deepseek(prompt):
     return None, None
 
 # ================= AI ROUTER =================
-def ai(user):
-    # 1️⃣ Gemini first
+def get_ai_response(user_input):
+
+    # Gemini first
     if not st.session_state.quota_exceeded:
         with st.spinner("Thinking..."):
-            r, src = gemini(user)
+            r, src = gemini(user_input)
         if r:
             return r, src
 
-    # 2️⃣ DeepSeek
-    r, src = deepseek(user)
+    # DeepSeek next
+    r, src = deepseek(user_input)
     if r:
         return r, src
 
-    # 3️⃣ Local fallback
-    return local_ai(user)
+    # Fallback
+    return local_ai(user_input)
 
 # ================= CHAT =================
-st.markdown("### 🧠 AI Mental Health Assistant")
+st.subheader("🧠 AI Mental Health Assistant")
 
-with st.form("chat_form", clear_on_submit=True):
-    user_input = st.text_area("Tell me what you're feeling")
-    send = st.form_submit_button("SEND")
+user_input = st.text_area("Tell me what you're feeling")
 
-    if send and user_input.strip():
-        reply, source = ai(user_input)
+if st.button("SEND"):
+    if user_input.strip():
+        reply, source = get_ai_response(user_input)
 
-        st.session_state.messages.append(("You", user_input, ""))
-        st.session_state.messages.append(("AI", reply, source))
+        st.session_state.messages.append(("You", user_input))
+        st.session_state.messages.append((f"AI ({source})", reply))
 
 # ================= DISPLAY =================
-for role, msg, src in st.session_state.messages:
-    if role == "AI":
-        st.markdown(f"""
-        <div class="chat">
-        <div class="ai">🤖 {src}</div>
-        <b>{msg}</b>
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.markdown(f"""
-        <div class="chat">
-        <b>You:</b> {msg}
-        </div>
-        """, unsafe_allow_html=True)
+for role, msg in st.session_state.messages:
+    st.markdown(f"**{role}:** {msg}")
 
 # ================= CONSULT =================
-st.markdown("---")
-st.markdown("### 📞 Book Consultation")
+st.divider()
+st.subheader("📞 Book Consultation")
 
 name = st.text_input("Name")
 phone = st.text_input("Phone Number")
 
-issue = st.selectbox("Select Concern",
+issue = st.selectbox("Concern",
     ["Stress","Anxiety","Depression","Sleep Issues","Relationship","Other"]
 )
 
@@ -231,13 +187,7 @@ if st.button("Submit & Continue"):
 
         st.success("Opening WhatsApp...")
 
-        st.markdown(f"""
-        <a href="{link}" target="_blank">
-        <button style="width:100%;background:#25D366;color:white;padding:14px;border:none;border-radius:12px;">
-        💬 Open WhatsApp
-        </button>
-        </a>
-        """, unsafe_allow_html=True)
+        st.markdown(f"[👉 Click here to open WhatsApp]({link})")
 
     else:
         st.error("Please fill all fields")
