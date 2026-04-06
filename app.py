@@ -29,15 +29,11 @@ profile_b64 = get_base64_image("profile.jpg")
 # =========================
 # SPLASH SCREEN
 # =========================
-# =========================
-# SPLASH SCREEN (UPGRADED)
-# =========================
 splash = st.empty()
 
 with splash.container():
     st.markdown(f"""
     <style>
-
     .splash-wrap {{
         position: fixed;
         inset: 0;
@@ -48,10 +44,7 @@ with splash.container():
         justify-content: center;
         flex-direction: column;
         color: white;
-        animation: fadeOut 1s ease forwards;
-        animation-delay: 2.5s;
     }}
-
     .splash-logo {{
         width: 92px;
         height: 92px;
@@ -60,35 +53,23 @@ with splash.container():
         align-items: center;
         justify-content: center;
         background: rgba(255,255,255,0.16);
+        box-shadow: 0 14px 30px rgba(0,0,0,0.22);
         font-size: 44px;
         margin-bottom: 12px;
-        animation: popIn 0.6s ease;
     }}
-
     .splash-profile {{
         width: 95px;
         height: 95px;
         border-radius: 18px;
-        margin: 12px 0;
-        object-fit: cover;
-        border: 3px solid rgba(255,255,255,0.7);
-
-        /* 🔥 GLOW EFFECT */
-        box-shadow:
-            0 0 10px rgba(255,255,255,0.5),
-            0 0 25px rgba(123,47,247,0.6),
-            0 0 40px rgba(0,194,255,0.6);
-
-        animation: glowPulse 2s infinite ease-in-out;
+        margin: 10px 0;
+        border: 3px solid rgba(255,255,255,0.6);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.35);
     }}
-
     .splash-title {{
         font-size: 2rem;
         font-weight: 900;
         text-align: center;
-        animation: fadeIn 0.8s ease;
     }}
-
     .loader {{
         margin-top: 20px;
         width: 50px;
@@ -98,66 +79,20 @@ with splash.container():
         border-radius: 50%;
         animation: spin 1s linear infinite;
     }}
-
-    /* ===== ANIMATIONS ===== */
-
     @keyframes spin {{
         to {{ transform: rotate(360deg); }}
     }}
-
-    @keyframes popIn {{
-        from {{ transform: scale(0.7); opacity: 0; }}
-        to {{ transform: scale(1); opacity: 1; }}
-    }}
-
-    @keyframes fadeIn {{
-        from {{ opacity: 0; transform: translateY(10px); }}
-        to {{ opacity: 1; transform: translateY(0); }}
-    }}
-
-    @keyframes glowPulse {{
-        0% {{
-            box-shadow:
-            0 0 10px rgba(255,255,255,0.4),
-            0 0 20px rgba(123,47,247,0.5),
-            0 0 30px rgba(0,194,255,0.5);
-        }}
-        50% {{
-            box-shadow:
-            0 0 20px rgba(255,255,255,0.8),
-            0 0 40px rgba(123,47,247,0.9),
-            0 0 60px rgba(0,194,255,0.9);
-        }}
-        100% {{
-            box-shadow:
-            0 0 10px rgba(255,255,255,0.4),
-            0 0 20px rgba(123,47,247,0.5),
-            0 0 30px rgba(0,194,255,0.5);
-        }}
-    }}
-
-    /* 🔥 FADE OUT */
-    @keyframes fadeOut {{
-        to {{
-            opacity: 0;
-            visibility: hidden;
-        }}
-    }}
-
     </style>
 
     <div class="splash-wrap">
         <div class="splash-logo">🧠</div>
-
         {"<img src='data:image/jpeg;base64," + profile_b64 + "' class='splash-profile'>" if profile_b64 else ""}
-
         <div class="splash-title">Durga Psychiatric Centre</div>
-
         <div class="loader"></div>
     </div>
     """, unsafe_allow_html=True)
 
-time.sleep(3)
+time.sleep(2.5)
 splash.empty()
 
 # =========================
