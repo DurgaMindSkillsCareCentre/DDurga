@@ -14,28 +14,48 @@ st.set_page_config(page_title="Durga Psychiatric Centre", layout="centered")
 st.markdown("""
 <style>
 
-/* 🔴 Hide Streamlit top header (Fork / Menu / Deploy icons) */
+/*  Hide top header */
 header[data-testid="stHeader"] {
     display: none !important;
 }
 
-/* 🔴 Remove top spacing created by header */
+/*  Remove top spacing */
 .block-container {
     padding-top: 0rem !important;
 }
 
-/* 🔴 Hide hamburger menu (⋮) */
+/*  Hide menu () */
 #MainMenu {
-    visibility: hidden;
+    visibility: hidden !important;
 }
 
-/* 🔴 Hide footer */
+/*  Hide footer completely */
 footer {
-    visibility: hidden;
+    display: none !important;
 }
 
-/* 🔴 Hide "Made with Streamlit" */
+/*  Hide Streamlit toolbar (deploy / fork icons) */
 [data-testid="stToolbar"] {
+    display: none !important;
+}
+
+/*  Hide bottom right "Running / Private model" badge */
+[data-testid="stStatusWidget"] {
+    display: none !important;
+}
+
+/*  Hide any floating status / connection indicators */
+div[data-testid="stDecoration"] {
+    display: none !important;
+}
+
+/*  Extra aggressive cleanup (mobile safe) */
+div[class*="viewerBadge"] {
+    display: none !important;
+}
+
+/*  Hide any iframe badge (sometimes appears) */
+iframe {
     display: none !important;
 }
 
