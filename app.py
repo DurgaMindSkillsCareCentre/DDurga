@@ -21,7 +21,6 @@ st.markdown("""
 .block-container { padding-bottom:120px; }
 label { color:white !important; }
 
-/* BUTTON STYLE */
 .stButton button {
     background:black;
     color:white;
@@ -30,7 +29,6 @@ label { color:white !important; }
     padding:10px 20px;
 }
 
-/* FLOAT BUTTONS */
 .float-w {
  position:fixed;bottom:90px;right:20px;
  background:#25D366;width:60px;height:60px;
@@ -46,7 +44,6 @@ label { color:white !important; }
  font-size:26px;color:white;z-index:9999;
 }
 
-/* FOOTER */
 .footer {
  position:fixed;bottom:0;width:100%;
  background:black;color:white;text-align:center;
@@ -56,7 +53,7 @@ label { color:white !important; }
 """, unsafe_allow_html=True)
 
 # ================= HEADER =================
-st.title("🧠 DURGA PSYCHIATRIC CENTRE")
+st.title(" DURGA PSYCHIATRIC CENTRE")
 
 col1, col2 = st.columns([1,2])
 
@@ -73,7 +70,7 @@ Durga Psychiatric Centre
 
 st.divider()
 
-# ================= CLEAN =================
+# ================= CLEAN TEXT =================
 def clean_text(t):
     if not isinstance(t, str):
         return ""
@@ -118,7 +115,7 @@ def gemini(q):
         return ""
 
 def local_ai(q):
-    return "You may be experiencing stress. Try breathing, rest, and seeking support."
+    return "You may be experiencing stress. Try rest, breathing, and consult a professional if needed."
 
 def smart_ai(q):
     if not q.strip():
@@ -137,18 +134,18 @@ def dss(q):
         return "Suicidal Risk", "Critical", "Immediate professional help required"
 
     if "depress" in q:
-        return "Depression", "Moderate", "Consult psychologist and start therapy"
+        return "Depression", "Moderate", "Consult psychologist and therapy needed"
 
     if "anxiety" in q:
-        return "Anxiety Disorder", "Mild-Moderate", "Relaxation + therapy recommended"
+        return "Anxiety Disorder", "Mild-Moderate", "Relaxation + counseling recommended"
 
     if "sleep" in q:
-        return "Sleep Disorder", "Mild", "Improve sleep hygiene"
+        return "Sleep Disorder", "Mild", "Improve sleep routine"
 
-    return "Stress", "Mild", "Routine balance and relaxation needed"
+    return "Stress", "Mild", "Lifestyle balance and support advised"
 
 # ================= TEXT INPUT =================
-st.subheader("💬 Text Message Your Query")
+st.subheader(" Text Message Your Query")
 
 query = st.text_area("Enter your problem", height=120)
 
@@ -159,12 +156,12 @@ if st.button("SEND"):
         cond, sev, adv = dss(query)
         ai = smart_ai(query)
 
-        st.markdown("### 🧠 Analysis")
+        st.markdown("###  Analysis")
         st.write(f"Condition: {cond}")
         st.write(f"Severity: {sev}")
         st.write(f"Advice: {adv}")
 
-        st.markdown("### 🌐 AI Summary")
+        st.markdown("###  AI Summary")
         st.write(ai)
 
     else:
@@ -173,7 +170,7 @@ if st.button("SEND"):
 st.markdown("<br><br>", unsafe_allow_html=True)
 
 # ================= CONSULT FORM =================
-st.subheader("📞 Book Consultation")
+st.subheader(" Book Consultation")
 
 name = st.text_input("Name")
 phone = st.text_input("Mobile")
@@ -207,9 +204,24 @@ Please call back to discuss further.
 
         url = f"https://wa.me/{WHATSAPP_NUMBER}?text={urllib.parse.quote(msg)}"
 
-        st.markdown(f'<meta http-equiv="refresh" content="0; url={url}">', unsafe_allow_html=True)
+        st.success("Click below to open WhatsApp ")
 
-        st.markdown(f'<a href="{url}" target="_blank">CLICK TO OPEN WHATSAPP</a>', unsafe_allow_html=True)
+        st.markdown(f"""
+        <a href="{url}" target="_blank">
+            <div style="
+                background:#25D366;
+                color:white;
+                padding:18px;
+                text-align:center;
+                font-size:20px;
+                border-radius:12px;
+                font-weight:bold;
+                margin-top:15px;
+            ">
+                 CLICK TO OPEN WHATSAPP
+            </div>
+        </a>
+        """, unsafe_allow_html=True)
 
     else:
         st.warning("Enter Name and Mobile")
@@ -217,15 +229,15 @@ Please call back to discuss further.
 # ================= FLOAT BUTTONS =================
 st.markdown(f"""
 <a href="https://wa.me/{WHATSAPP_NUMBER}">
-<div class="float-w">💬</div></a>
+<div class="float-w"></div></a>
 
 <a href="tel:+{WHATSAPP_NUMBER}">
-<div class="float-c">📞</div></a>
+<div class="float-c"></div></a>
 """, unsafe_allow_html=True)
 
 # ================= FOOTER =================
 st.markdown(f"""
 <a href="https://wa.me/{WHATSAPP_NUMBER}">
-<div class="footer">📞 Book Consultation on WhatsApp</div>
+<div class="footer"> Book Consultation on WhatsApp</div>
 </a>
 """, unsafe_allow_html=True)
