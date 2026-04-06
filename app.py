@@ -43,54 +43,93 @@ st.image("profile.jpg", width=120)
 
 # ================= CLEAN =================
 def clean(text):
-    if not text: return ""
+    if not text:
+        return ""
     text = re.sub(r'\s+', ' ', text)
     return " ".join(text.split('.')[:3])
 
 def valid(ans):
-    return ans and len(ans.strip()) > 20
+    return ans and len(ans.strip()) > 30
 
 # ================= WEB AI =================
 def serper(q):
     try:
         url = "https://google.serper.dev/search"
-        headers = {"X-API-KEY": SERPER_API_KEY}
-        res = requests.post(url, json={"q": q}, headers=headers).json()
-        return clean(res.get("organic", [{}])[0].get("snippet",""))
+        headers = {
+            "X-API-KEY": SERPER_API_KEY,
+            "Content-Type": "application/json"
+        }
+        res = requests.post(url, json={"q": q}, headers=headers, timeout=8)
+
+        if res.status_code == 200:
+            data = res.json()
+            return clean(data.get("organic", [{}])[0].get("snippet", ""))
+        return ""
     except:
         return ""
 
 def duck(q):
     try:
-        res = requests.get(f"https://api.duckduckgo.com/?q={q}&format=json").json()
-        return clean(res.get("AbstractText",""))
+        url = f"https://api.duckduckgo.com/?q={q}&format=json&no_redirect=1"
+        res = requests.get(url, timeout=8)
+
+        if res.status_code == 200:
+            return clean(res.json().get("AbstractText", ""))
+        return ""
     except:
         return ""
 
 def wiki(q):
     try:
-        res = requests.get(f"https://en.wikipedia.org/api/rest_v1/page/summary/{q}").json()
-        return clean(res.get("extract",""))
+        url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{q}"
+        res = requests.get(url, timeout=8)
+
+        if res.status_code == 200:
+            return clean(res.json().get("extract", ""))
+        return ""
     except:
         return ""
 
 def gemini(q):
     try:
         url = f"https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
-        data = {"contents":[{"parts":[{"text":q}]}]}
-        res = requests.post(url,json=data).json()
-        return clean(res["candidates"][0]["content"]["parts"][0]["text"])
+        payload = {"contents":[{"parts":[{"text":q}]}]}
+
+        res = requests.post(url, json=payload, timeout=8)
+
+        if res.status_code == 200:
+            data = res.json()
+            return clean(data["candidates"][0]["content"]["parts"][0]["text"])
+        return ""
     except:
         return ""
 
+# ================= LOCAL AI =================
 def local_ai(q):
+    q=q.lower()
+    if "sleep" in q:
+        return "Sleep disturbance often results from stress or irregular routine. Maintain sleep schedule and reduce screen time."
+    if "anxiety" in q:
+        return "Anxiety creates excessive worry. Breathing exercises and counseling help manage it."
+    if "depress" in q:
+        return "Depression includes low mood and lack of energy. Early professional support improves recovery."
     return "Take a slow breath. You are safe. Focus on one small step."
 
+# ================= MASTER AI =================
 def smart_ai(q):
-    for fn in [serper, duck, wiki, gemini]:
-        ans = fn(q)
-        if valid(ans):
-            return ans
+
+    s = serper(q)
+    if valid(s): return s
+
+    d = duck(q)
+    if valid(d): return d
+
+    w = wiki(q)
+    if valid(w): return w
+
+    g = gemini(q)
+    if valid(g): return g
+
     return local_ai(q)
 
 # ================= DSS =================
@@ -112,14 +151,7 @@ if "chat" not in st.session_state:
 # ================= INPUT =================
 st.subheader("💬 Enter your problem")
 
-col1, col2 = st.columns([8,1])
-
-with col1:
-    query = st.text_area("Type here", height=120)
-
-with col2:
-    if st.button("❌"):
-        query = ""
+query = st.text_area("Type here", height=120)
 
 # ================= SEND =================
 if st.button("SEND"):
