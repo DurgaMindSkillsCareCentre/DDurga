@@ -21,19 +21,16 @@ st.markdown("""
 .block-container { padding-bottom:120px; }
 label { color:white !important; }
 
-.mic-btn {
- width:110px;height:110px;border-radius:50%;
- background:#25D366;
- display:flex;align-items:center;justify-content:center;
- font-size:40px;color:white;margin:auto;
+/* BUTTON STYLE */
+.stButton button {
+    background:black;
+    color:white;
+    font-size:18px;
+    border-radius:10px;
+    padding:10px 20px;
 }
 
-.footer {
- position:fixed;bottom:0;width:100%;
- background:black;color:white;text-align:center;
- padding:10px;z-index:9999;
-}
-
+/* FLOAT BUTTONS */
 .float-w {
  position:fixed;bottom:90px;right:20px;
  background:#25D366;width:60px;height:60px;
@@ -47,6 +44,13 @@ label { color:white !important; }
  border-radius:50%;display:flex;
  align-items:center;justify-content:center;
  font-size:26px;color:white;z-index:9999;
+}
+
+/* FOOTER */
+.footer {
+ position:fixed;bottom:0;width:100%;
+ background:black;color:white;text-align:center;
+ padding:12px;font-size:16px;z-index:9999;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -114,10 +118,10 @@ def gemini(q):
         return ""
 
 def local_ai(q):
-    return "You may be experiencing stress. Small steps and support help recovery."
+    return "You may be experiencing stress. Try breathing, rest, and seeking support."
 
 def smart_ai(q):
-    if not isinstance(q, str) or not q.strip():
+    if not q.strip():
         return ""
     text = serper(q) or duck(q) or wiki(q) or gemini(q) or local_ai(q)
     return clean_text(text)
@@ -130,59 +134,45 @@ def dss(q):
     q = q.lower()
 
     if "suicide" in q:
-        return "Suicidal Risk", "Critical", "Immediate help required"
+        return "Suicidal Risk", "Critical", "Immediate professional help required"
 
     if "depress" in q:
-        return "Depression", "Moderate", "Consult psychologist"
+        return "Depression", "Moderate", "Consult psychologist and start therapy"
 
     if "anxiety" in q:
-        return "Anxiety", "Mild-Moderate", "Therapy helps"
+        return "Anxiety Disorder", "Mild-Moderate", "Relaxation + therapy recommended"
 
-    return "Stress", "Mild", "Relax and manage routine"
+    if "sleep" in q:
+        return "Sleep Disorder", "Mild", "Improve sleep hygiene"
 
-# ================= VOICE =================
-st.subheader("🎤 Voice Input")
+    return "Stress", "Mild", "Routine balance and relaxation needed"
 
-voice_html = """
-<div style="text-align:center;">
-<div class="mic-btn" onclick="start()">🎤</div>
-<p>Tap and Speak</p>
-</div>
+# ================= TEXT INPUT =================
+st.subheader("💬 Text Message Your Query")
 
-<script>
-function start(){
- var r=new webkitSpeechRecognition();
- r.lang="en-US";
- r.start();
- r.onresult=function(e){
-  let t=e.results[0][0].transcript;
-  window.parent.postMessage(
-   {type:"streamlit:setComponentValue",value:t},"*"
-  );
- }
-}
-</script>
-"""
+query = st.text_area("Enter your problem", height=120)
 
-voice = st.components.v1.html(voice_html, height=200)
+if st.button("SEND"):
 
-# ================= RESULT =================
-if isinstance(voice, str) and voice.strip():
+    if query.strip():
 
-    cond, sev, adv = dss(voice)
-    ai = smart_ai(voice)
+        cond, sev, adv = dss(query)
+        ai = smart_ai(query)
 
-    st.markdown("### 🧠 Analysis")
-    st.write(f"Condition: {cond}")
-    st.write(f"Severity: {sev}")
-    st.write(f"Advice: {adv}")
+        st.markdown("### 🧠 Analysis")
+        st.write(f"Condition: {cond}")
+        st.write(f"Severity: {sev}")
+        st.write(f"Advice: {adv}")
 
-    st.markdown("### 🌐 AI Summary")
-    st.write(ai)
+        st.markdown("### 🌐 AI Summary")
+        st.write(ai)
 
-st.markdown("<br>", unsafe_allow_html=True)
+    else:
+        st.warning("Please enter your query")
 
-# ================= FORM =================
+st.markdown("<br><br>", unsafe_allow_html=True)
+
+# ================= CONSULT FORM =================
 st.subheader("📞 Book Consultation")
 
 name = st.text_input("Name")
@@ -195,22 +185,24 @@ cause = st.selectbox("Concern", [
 "Addiction","Sexual Health Issues","Other"
 ])
 
-mode = st.radio("Mode", ["Online","In-Person"])
-time = st.selectbox("Time", ["Morning","Afternoon","Evening"])
+mode = st.radio("Session Mode", ["Online","In-Person"])
+time = st.selectbox("Preferred Time", ["Morning","Afternoon","Evening"])
 loc = st.text_input("Location")
 
 if st.button("Submit"):
 
     if name and phone:
 
-        msg = f"""I would like to request an appointment.
+        msg = f"""I would like to request an appointment with Psychologist D.Durga.
 
 Name: {name}
 Mobile: {phone}
 Concern: {cause}
-Mode: {mode}
-Time: {time}
+Session Mode: {mode}
+Preferred Time: {time}
 Location: {loc}
+
+Please call back to discuss further.
 """
 
         url = f"https://wa.me/{WHATSAPP_NUMBER}?text={urllib.parse.quote(msg)}"
@@ -222,7 +214,7 @@ Location: {loc}
     else:
         st.warning("Enter Name and Mobile")
 
-# ================= FLOAT =================
+# ================= FLOAT BUTTONS =================
 st.markdown(f"""
 <a href="https://wa.me/{WHATSAPP_NUMBER}">
 <div class="float-w">💬</div></a>
