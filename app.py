@@ -268,25 +268,28 @@ st.markdown(
         font-weight: 800;
     }
 
-    .cta-link {
-        display: block;
-        text-decoration: none !important;
+    .whatsapp-cta-wrap {
         margin-top: 12px;
     }
 
-    .cta-card {
-        background: #25D366;
-        color: white !important;
-        padding: 18px 18px;
-        text-align: center;
-        border-radius: 14px;
-        font-size: 1.06rem;
-        font-weight: 900;
-        box-shadow: 0 10px 28px rgba(0,0,0,0.18);
+    .whatsapp-cta {
         display: flex;
         align-items: center;
         justify-content: center;
         gap: 10px;
+        width: 100%;
+        padding: 14px 16px;
+        border-radius: 14px;
+        background: linear-gradient(90deg, #25D366, #1ebe5d);
+        color: #ffffff !important;
+        text-decoration: none !important;
+        font-size: 1.02rem;
+        font-weight: 900;
+        box-shadow: 0 8px 22px rgba(0,0,0,0.18);
+    }
+
+    .whatsapp-cta:hover {
+        filter: brightness(1.03);
     }
 
     .float-btn {
@@ -355,7 +358,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# spacer
 st.markdown("<div style='height:18px;'></div>", unsafe_allow_html=True)
 
 # =========================
@@ -890,16 +892,15 @@ if submitted:
     else:
         st.warning("Please enter both Name and Mobile Number.")
 
+# Fixed WhatsApp CTA without raw HTML overlay
 if st.session_state.last_whatsapp_url:
     st.markdown(
         f"""
-        <a href="{st.session_state.last_whatsapp_url}" target="_blank"
-           style="display:block;text-decoration:none;margin-top:12px;">
-            <div class="cta-card">
-                {icon_whatsapp()}
-                <div>CLICK TO OPEN WHATSAPP</div>
-            </div>
-        </a>
+        <div class="whatsapp-cta-wrap">
+            <a class="whatsapp-cta" href="{st.session_state.last_whatsapp_url}" target="_blank" rel="noopener noreferrer">
+                📲 CLICK TO OPEN WHATSAPP
+            </a>
+        </div>
         """,
         unsafe_allow_html=True,
     )
