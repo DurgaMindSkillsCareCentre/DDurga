@@ -48,8 +48,8 @@ with splash.container():
         justify-content: center;
         flex-direction: column;
         color: white;
-        animation: fadeOut 0.8s ease forwards;
-        animation-delay: 1.6s;
+        animation: fadeOut 1s ease forwards;
+        animation-delay: 2.5s;
     }}
 
     .splash-logo {{
@@ -157,7 +157,7 @@ with splash.container():
     </div>
     """, unsafe_allow_html=True)
 
-time.sleep(2)
+time.sleep(3)
 splash.empty()
 
 # =========================
