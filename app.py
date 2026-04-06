@@ -54,9 +54,7 @@ with splash.container():
             font-size: 1rem;
             opacity: 0.95;
             text-align: center;
-        }
- 
-        
+        }     
         .loader{
             margin-top: 22px;
             width: 54px;
@@ -76,8 +74,7 @@ with splash.container():
         </style>
 
         <div class="splash-wrap">
-            <div class="splash-logo">🧠</div>
-            
+            <div class="splash-logo">🧠</div>     
             <div class="splash-title">Durga Psychiatric Centre</div>
             <div class="splash-sub">Loading your clinic assistant...</div>
             <div class="loader"></div>
