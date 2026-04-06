@@ -11,7 +11,36 @@ import streamlit as st
 # CONFIG
 # =========================
 st.set_page_config(page_title="Durga Psychiatric Centre", layout="centered")
+st.markdown("""
+<style>
 
+/* 🔴 Hide Streamlit top header (Fork / Menu / Deploy icons) */
+header[data-testid="stHeader"] {
+    display: none !important;
+}
+
+/* 🔴 Remove top spacing created by header */
+.block-container {
+    padding-top: 0rem !important;
+}
+
+/* 🔴 Hide hamburger menu (⋮) */
+#MainMenu {
+    visibility: hidden;
+}
+
+/* 🔴 Hide footer */
+footer {
+    visibility: hidden;
+}
+
+/* 🔴 Hide "Made with Streamlit" */
+[data-testid="stToolbar"] {
+    display: none !important;
+}
+
+</style>
+""", unsafe_allow_html=True)
 WHATSAPP_NUMBER = "917395944527"   # wa.me format, no plus sign
 DISPLAY_NUMBER = "+91 7395944527"  # display format
 
