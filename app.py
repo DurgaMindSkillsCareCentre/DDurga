@@ -34,7 +34,7 @@ border-radius:50%;display:flex;align-items:center;justify-content:center;font-si
 """, unsafe_allow_html=True)
 
 # ================= HEADER =================
-st.title(" DURGA PSYCHIATRIC CENTRE")
+st.title("🧠 DURGA PSYCHIATRIC CENTRE")
 st.image("profile.jpg", width=120)
 
 # ================= HELPERS =================
@@ -114,7 +114,7 @@ if "chat" not in st.session_state:
     st.session_state.chat=[]
 
 # ================= INPUT =================
-st.subheader(" Enter your problem")
+st.subheader("💬 Enter your problem")
 
 query = st.text_area("Type here", height=120)
 
@@ -130,18 +130,18 @@ if st.button("SEND"):
         st.session_state.chat.append(("ai",ai))
 
 # ================= CHAT =================
-st.subheader(" Conversation")
+st.subheader("💬 Conversation")
 
 for role,msg in st.session_state.chat:
     if role=="user":
-        st.markdown(f'<div class="user"> {msg}</div>',unsafe_allow_html=True)
+        st.markdown(f'<div class="user">👤 {msg}</div>',unsafe_allow_html=True)
     else:
-        st.markdown(f'<div class="ai"> {msg}</div>',unsafe_allow_html=True)
+        st.markdown(f'<div class="ai">🤖 {msg}</div>',unsafe_allow_html=True)
 
 st.markdown("<br><br>", unsafe_allow_html=True)
 
 # ================= FORM =================
-st.subheader(" Book Consultation")
+st.subheader("📞 Book Consultation")
 
 name=st.text_input("Name")
 phone=st.text_input("Mobile")
@@ -178,7 +178,7 @@ Please call back.
         <a href="{url}" target="_blank">
         <div style="background:#25D366;padding:18px;text-align:center;
         color:white;font-size:20px;border-radius:10px;">
-         CLICK TO OPEN WHATSAPP
+        📲 CLICK TO OPEN WHATSAPP
         </div>
         </a>
         """,unsafe_allow_html=True)
@@ -186,15 +186,15 @@ Please call back.
 # ================= FLOAT =================
 st.markdown(f"""
 <a href="https://wa.me/{WHATSAPP_NUMBER}">
-<div class="float-w"></div></a>
+<div class="float-w">💬</div></a>
 
 <a href="tel:+{WHATSAPP_NUMBER}">
-<div class="float-c"></div></a>
+<div class="float-c">📞</div></a>
 """, unsafe_allow_html=True)
 
 # ================= FOOTER =================
 st.markdown(f"""
 <a href="https://wa.me/{WHATSAPP_NUMBER}">
-<div class="footer"> Book Consultation on WhatsApp</div>
+<div class="footer">📞 Book Consultation on WhatsApp</div>
 </a>
 """, unsafe_allow_html=True)
