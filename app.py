@@ -12,13 +12,11 @@ st.set_page_config(page_title="Durga Psychiatric Centre", layout="centered")
 st.markdown("""
 <style>
 
-/* BACKGROUND */
 .stApp {
     background: linear-gradient(135deg, #5f6dfc, #7b2ff7);
     color: white;
 }
 
-/* INPUT TEXT */
 textarea, input {
     color: black !important;
 }
@@ -31,7 +29,7 @@ div.stButton > button {
     font-weight: bold;
 }
 
-/* LABELS WHITE */
+/* LABELS */
 label {
     color: white !important;
 }
@@ -50,7 +48,7 @@ label {
     margin-top:10px;
 }
 
-/* FLOATING WHATSAPP */
+/* FLOAT BUTTONS */
 .float-whatsapp {
     position: fixed;
     bottom: 90px;
@@ -61,10 +59,8 @@ label {
     padding: 15px;
     border-radius: 50%;
     z-index: 9999;
-    text-align: center;
 }
 
-/* FLOATING CALL BUTTON */
 .float-call {
     position: fixed;
     bottom: 160px;
@@ -75,20 +71,17 @@ label {
     padding: 15px;
     border-radius: 50%;
     z-index: 9999;
-    text-align: center;
 }
 
-/* FOOTER BAR */
+/* FOOTER */
 .footer-bar {
     position: fixed;
     bottom: 0;
-    left: 0;
     width: 100%;
     background: black;
     color: white;
     text-align: center;
     padding: 12px;
-    font-size: 16px;
     z-index: 9999;
 }
 
@@ -98,91 +91,114 @@ label {
 # =========================
 # HEADER
 # =========================
-st.title("🧠 DURGA PSYCHIATRIC CENTRE")
+st.title(" DURGA PSYCHIATRIC CENTRE")
 
 st.image("profile.jpg", width=150)
 
 st.markdown("""
 **D.Durga**  
-DPN (Nursing), DAHM, BBA, MBA(HR), MSW (Medical & Psychiatry)  
+DPN (Nursing), DAHM, BBA, MBA(HR), MSW  
 Founder & CEO  
 """)
 
 # =========================
-# AI INPUT
+# SESSION STATE
 # =========================
-st.subheader("Tell me what you're feeling")
-
 if "chat" not in st.session_state:
     st.session_state.chat = []
 
-user_input = st.text_area("", key="input_box")
+if "input_text" not in st.session_state:
+    st.session_state.input_text = ""
 
+# =========================
+# INPUT
+# =========================
+st.subheader("Tell me what you're feeling")
+
+user_input = st.text_area("", key="input_text")
+
+# =========================
+# DSS FUNCTION
+# =========================
+def analyze(text):
+    text = text.lower()
+
+    if "stress" in text:
+        return ("Stress", "Mild", "Practice breathing and reduce workload.")
+
+    elif "depress" in text:
+        return ("Depression", "Moderate", "Talk to someone and seek support.")
+
+    elif "anxiety" in text:
+        return ("Anxiety", "Mild�Moderate", "Relaxation and counseling help.")
+
+    elif "sleep" in text:
+        return ("Sleep Disorder", "Mild", "Maintain routine and avoid screens.")
+
+    else:
+        return ("Emotional Distress", "Mild", "Stay calm and observe patterns.")
+
+# =========================
+# SEND BUTTON (NO ERROR)
+# =========================
 if st.button("SEND"):
-    if user_input.strip():
-        st.session_state.chat.append(("You", user_input))
 
-        # SIMPLE LOCAL AI RESPONSE (SAFE FALLBACK)
-        if "stress" in user_input.lower():
-            response = "Stress is your mind under pressure. Try deep breathing and small steps."
-        elif "depress" in user_input.lower():
-            response = "Depression is prolonged sadness and low energy. Talking helps recovery."
-        else:
-            response = "Take a slow breath. You are safe. Focus on one small step."
+    if st.session_state.input_text.strip():
+
+        query = st.session_state.input_text
+        st.session_state.chat.append(("You", query))
+
+        cond, sev, adv = analyze(query)
+
+        response = f"""
+**Condition:** {cond}  
+**Severity:** {sev}  
+**Advice:** {adv}
+"""
 
         st.session_state.chat.append(("AI", response))
 
-        # CLEAR INPUT
-        st.session_state.input_box = ""
+        # SAFE CLEAR
+        st.session_state.input_text = ""
 
 # =========================
 # CHAT DISPLAY
 # =========================
-st.subheader("💬 Conversation")
+st.subheader(" Conversation")
 
 for role, msg in st.session_state.chat:
-    st.markdown(f"**{role}:** {msg}")
+    st.markdown(f"**{role}:**")
+    st.markdown(msg)
 
 # =========================
-# SPACING FIX (IMPORTANT)
+# SPACING
 # =========================
 st.markdown("<br><br>", unsafe_allow_html=True)
 
 # =========================
-# CONSULTATION FORM
+# FORM
 # =========================
-st.subheader("📞 Book Consultation")
+st.subheader(" Book Consultation")
 
 name = st.text_input("Name")
 mobile = st.text_input("Mobile Number")
 
 cause = st.selectbox("Concern", [
-    "Anxiety",
-    "Depression",
-    "Stress",
-    "Relationship Issues",
-    "Sleep Disorder",
-    "Sexual Issues",
-    "Addiction",
-    "Panic Attacks",
-    "Bipolar Disorder",
-    "OCD",
-    "Other"
+    "Anxiety","Depression","Stress","Relationship Issues",
+    "Sleep Disorder","Sexual Issues","Addiction","Panic Attacks",
+    "Bipolar Disorder","OCD","Other"
 ])
 
-mode = st.radio("Session Mode", ["Online", "In-Person"])
-
-time = st.selectbox("Preferred Time", ["Morning", "Afternoon", "Evening"])
-
-location = st.text_input("Location / Area")
+mode = st.radio("Session Mode", ["Online","In-Person"])
+time = st.selectbox("Preferred Time", ["Morning","Afternoon","Evening"])
+location = st.text_input("Location")
 
 # =========================
-# SUBMIT BUTTON
+# SUBMIT  AUTO WHATSAPP
 # =========================
 if st.button("Submit Consultation"):
 
-    message = f"""
-I would like to request an appointment with Psychologist D.Durga.
+    msg = f"""I would like to request an appointment with Psychologist D.Durga.
 
 Name: {name}
 Mobile: {mobile}
@@ -194,49 +210,47 @@ Location: {location}
 Please call back to discuss further.
 """
 
-    encoded = urllib.parse.quote(message)
-    whatsapp_url = f"https://wa.me/917395944527?text={encoded}"
+    url = "https://wa.me/917395944527?text=" + urllib.parse.quote(msg)
 
-    # AUTO OPEN WHATSAPP
     st.markdown(f"""
     <script>
-    window.open("{whatsapp_url}", "_blank");
+    window.open("{url}", "_blank");
     </script>
     """, unsafe_allow_html=True)
 
-    st.success("Redirecting to WhatsApp...")
+    st.success("Opening WhatsApp...")
 
 # =========================
-# NORMAL WHATSAPP BUTTON (KEEP EXISTING)
+# NORMAL WHATSAPP BUTTON
 # =========================
 st.markdown("""
 <a href="https://wa.me/917395944527" target="_blank" class="whatsapp-btn">
-📲 Click to Open WhatsApp
+ Click to Open WhatsApp
 </a>
 """, unsafe_allow_html=True)
 
 # =========================
-# FLOATING BUTTONS
+# FLOAT BUTTONS
 # =========================
 st.markdown("""
 <a href="https://wa.me/917395944527" target="_blank">
-<div class="float-whatsapp">💬</div>
+<div class="float-whatsapp"></div>
 </a>
 """, unsafe_allow_html=True)
 
 st.markdown("""
 <a href="tel:+917395944527">
-<div class="float-call">📞</div>
+<div class="float-call"></div>
 </a>
 """, unsafe_allow_html=True)
 
 # =========================
-# FOOTER FIXED BAR
+# FOOTER
 # =========================
 st.markdown("""
 <a href="https://wa.me/917395944527" target="_blank">
 <div class="footer-bar">
-📞 Book Consultation on WhatsApp: +91 7395944527
+ Book Consultation on WhatsApp: +91 7395944527
 </div>
 </a>
 """, unsafe_allow_html=True)
