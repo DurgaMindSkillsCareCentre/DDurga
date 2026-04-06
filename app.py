@@ -82,7 +82,34 @@ with splash.container():
         """,
         unsafe_allow_html=True,
     )
+st.markdown("""
+<script>
+function speakWelcome() {
+    try {
+        const msg = new SpeechSynthesisUtterance(
+            "Welcome to Durga Psychiatric Centre. Your mental wellness matters. How can I help you today?"
+        );
 
+        msg.rate = 0.95;
+        msg.pitch = 1;
+        msg.volume = 1;
+
+        // Choose a better voice if available
+        const voices = window.speechSynthesis.getVoices();
+        if (voices.length > 0) {
+            msg.voice = voices.find(v => v.name.includes("Female")) || voices[0];
+        }
+
+        window.speechSynthesis.speak(msg);
+    } catch(e) {
+        console.log("Voice not supported");
+    }
+}
+
+// Run once after slight delay
+setTimeout(speakWelcome, 400);
+</script>
+""", unsafe_allow_html=True)
 time.sleep(2.5)
 splash.empty()
 st.markdown("""
