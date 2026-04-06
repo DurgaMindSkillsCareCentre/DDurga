@@ -12,20 +12,32 @@ import streamlit as st
 # =========================
 st.set_page_config(page_title="Durga Psychiatric Centre", layout="centered")
 
-WHATSAPP_NUMBER = "917395944527"
+WHATSAPP_NUMBER = "9175944527"
 SERPER_API_KEY = st.secrets.get("SERPER_API_KEY", os.getenv("SERPER_API_KEY", ""))
 GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", os.getenv("GEMINI_API_KEY", ""))
 
 # =========================
-# SVG ICONS (mobile-safe)
+# SVG ICONS
 # =========================
 def icon_brain():
     return """
-    <svg width="34" height="34" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <circle cx="23" cy="23" r="12" fill="white"/>
-      <circle cx="41" cy="23" r="12" fill="white"/>
+    <svg width="36" height="36" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#ff7a59"/>
+          <stop offset="45%" stop-color="#7b2ff7"/>
+          <stop offset="100%" stop-color="#00c2ff"/>
+        </linearGradient>
+        <linearGradient id="g2" x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#ffd166"/>
+          <stop offset="100%" stop-color="#ff4d8d"/>
+        </linearGradient>
+      </defs>
+      <circle cx="23" cy="23" r="12" fill="url(#g2)"/>
+      <circle cx="41" cy="23" r="12" fill="url(#g1)"/>
       <rect x="14" y="25" width="36" height="22" rx="11" fill="white"/>
       <path d="M24 16v32M40 16v32M32 14v36" stroke="#7b2ff7" stroke-width="3" stroke-linecap="round"/>
+      <path d="M18 28c2 0 4-2 5-4M46 28c-2 0-4-2-5-4" stroke="#ff4d8d" stroke-width="2.5" stroke-linecap="round"/>
     </svg>
     """
 
@@ -36,31 +48,50 @@ def icon_chat():
     </svg>
     """
 
-def icon_phone():
+def icon_mobile():
     return """
     <svg width="30" height="30" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <path d="M20 11h24a4 4 0 0 1 4 4v34a4 4 0 0 1-4 4H20a4 4 0 0 1-4-4V15a4 4 0 0 1 4-4z" fill="white"/>
-      <rect x="27" y="14" width="10" height="2" rx="1" fill="#7b2ff7"/>
-      <circle cx="32" cy="45" r="3" fill="#7b2ff7"/>
+      <defs>
+        <linearGradient id="phoneg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#00c2ff"/>
+          <stop offset="100%" stop-color="#7b2ff7"/>
+        </linearGradient>
+      </defs>
+      <rect x="20" y="8" width="24" height="48" rx="6" fill="url(#phoneg)"/>
+      <rect x="23" y="13" width="18" height="32" rx="3" fill="white"/>
+      <circle cx="32" cy="51" r="3" fill="white"/>
     </svg>
     """
 
 def icon_user():
     return """
     <svg width="28" height="28" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <circle cx="32" cy="22" r="11" fill="white"/>
-      <path d="M14 54c2-11 10-16 18-16s16 5 18 16" fill="white"/>
+      <defs>
+        <linearGradient id="ug" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#7b2ff7"/>
+          <stop offset="100%" stop-color="#00c2ff"/>
+        </linearGradient>
+      </defs>
+      <circle cx="32" cy="22" r="11" fill="url(#ug)"/>
+      <path d="M14 54c2-11 10-16 18-16s16 5 18 16" fill="url(#ug)"/>
     </svg>
     """
 
 def icon_bot():
     return """
     <svg width="28" height="28" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <rect x="14" y="16" width="36" height="28" rx="10" fill="white"/>
-      <circle cx="26" cy="29" r="3" fill="#7b2ff7"/>
-      <circle cx="38" cy="29" r="3" fill="#7b2ff7"/>
-      <rect x="30" y="8" width="4" height="8" rx="2" fill="white"/>
-      <circle cx="32" cy="6" r="3" fill="white"/>
+      <defs>
+        <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#ff7a59"/>
+          <stop offset="50%" stop-color="#7b2ff7"/>
+          <stop offset="100%" stop-color="#00c2ff"/>
+        </linearGradient>
+      </defs>
+      <rect x="14" y="16" width="36" height="28" rx="10" fill="url(#bg)"/>
+      <circle cx="26" cy="29" r="3" fill="white"/>
+      <circle cx="38" cy="29" r="3" fill="white"/>
+      <rect x="30" y="8" width="4" height="8" rx="2" fill="url(#bg)"/>
+      <circle cx="32" cy="6" r="3" fill="url(#bg)"/>
     </svg>
     """
 
@@ -148,7 +179,9 @@ st.markdown(
         color: white;
     }
 
-    .stButton > button {
+    .stButton > button,
+    div[data-testid="stFormSubmitButton"] button,
+    div[data-testid="stBaseButton-secondary"] button {
         background: #111111 !important;
         color: white !important;
         border-radius: 14px !important;
@@ -319,7 +352,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# spacer
 st.markdown("<div style='height:18px;'></div>", unsafe_allow_html=True)
 
 # =========================
@@ -807,7 +839,7 @@ st.markdown("<div style='height: 24px;'></div>", unsafe_allow_html=True)
 # =========================
 # CONSULTATION FORM
 # =========================
-render_section_header(icon_phone(), "Book Consultation")
+render_section_header(icon_mobile(), "Book Consultation")
 
 with st.form("consultation_form", clear_on_submit=False):
     name = st.text_input("Name")
@@ -865,7 +897,7 @@ if st.session_state.last_whatsapp_url:
         <a class="cta-link" href="{st.session_state.last_whatsapp_url}" target="_blank">
             <div class="cta-card">
                 {icon_whatsapp()}
-                <span>CLICK TO OPEN WHATSAPP</span>
+                <div>CLICK TO OPEN WHATSAPP</div>
             </div>
         </a>
         """,
@@ -882,7 +914,7 @@ st.markdown(
     </a>
 
     <a href="tel:+{WHATSAPP_NUMBER}" aria-label="Call">
-        <div class="float-btn float-call">{icon_phone()}</div>
+        <div class="float-btn float-call">{icon_mobile()}</div>
     </a>
     """,
     unsafe_allow_html=True,
@@ -896,7 +928,7 @@ st.markdown(
     <div class="footer-bar">
         <a href="https://wa.me/{WHATSAPP_NUMBER}" target="_blank">
             <div class="footer-btn">
-                <span class="footer-icon">{icon_phone()}</span>
+                <span class="footer-icon">{icon_mobile()}</span>
                 <span class="footer-icon">{icon_whatsapp()}</span>
                 <span>BOOK CONSULTATION NOW</span>
             </div>
