@@ -55,27 +55,7 @@ with splash.container():
             opacity: 0.95;
             text-align: center;
         }
-        .splash-profile{
-    width: 90px;
-    height: 90px;
-    border-radius: 18px;
-    object-fit: cover;
-    margin: 14px 0;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.35);
-    border: 3px solid rgba(255,255,255,0.6);
-    animation: fadeInProfile 0.8s ease;
-}
-
-@keyframes fadeInProfile{
-    from{
-        opacity: 0;
-        transform: translateY(12px);
-    }
-    to{
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
+ 
         
         .loader{
             margin-top: 22px;
@@ -97,7 +77,7 @@ with splash.container():
 
         <div class="splash-wrap">
             <div class="splash-logo">🧠</div>
-            <img src="profile.jpg" class="splash-profile">
+            
             <div class="splash-title">Durga Psychiatric Centre</div>
             <div class="splash-sub">Loading your clinic assistant...</div>
             <div class="loader"></div>
