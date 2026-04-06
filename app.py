@@ -83,7 +83,7 @@ with splash.container():
         unsafe_allow_html=True,
     )
 
-time.sleep(1.5)
+time.sleep(2.5)
 splash.empty()
 st.markdown("""
 <style>
