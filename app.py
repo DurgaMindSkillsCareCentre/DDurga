@@ -12,7 +12,10 @@ import streamlit as st
 # =========================
 st.set_page_config(page_title="Durga Psychiatric Centre", layout="centered")
 
-WHATSAPP_NUMBER = "9175944527"
+# Correct numbers
+WHATSAPP_NUMBER = "917395944527"   # wa.me format, no plus sign
+DISPLAY_NUMBER = "+91 7395944527"   # human-readable display
+
 SERPER_API_KEY = st.secrets.get("SERPER_API_KEY", os.getenv("SERPER_API_KEY", ""))
 GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", os.getenv("GEMINI_API_KEY", ""))
 
@@ -120,7 +123,7 @@ st.markdown(
 
     .block-container {
         padding-top: 2.4rem !important;
-        padding-bottom: 320px;
+        padding-bottom: 330px;
     }
 
     .hero-wrap {
@@ -180,8 +183,7 @@ st.markdown(
     }
 
     .stButton > button,
-    div[data-testid="stFormSubmitButton"] button,
-    div[data-testid="stBaseButton-secondary"] button {
+    div[data-testid="stFormSubmitButton"] button {
         background: #111111 !important;
         color: white !important;
         border-radius: 14px !important;
@@ -267,7 +269,9 @@ st.markdown(
     }
 
     .cta-link {
+        display: block;
         text-decoration: none !important;
+        margin-top: 12px;
     }
 
     .cta-card {
@@ -283,7 +287,6 @@ st.markdown(
         align-items: center;
         justify-content: center;
         gap: 10px;
-        margin-top: 12px;
     }
 
     .float-btn {
@@ -352,6 +355,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# spacer
 st.markdown("<div style='height:18px;'></div>", unsafe_allow_html=True)
 
 # =========================
@@ -483,10 +487,7 @@ def serper_search(query):
         return ""
     try:
         url = "https://google.serper.dev/search"
-        headers = {
-            "X-API-KEY": SERPER_API_KEY,
-            "Content-Type": "application/json",
-        }
+        headers = {"X-API-KEY": SERPER_API_KEY, "Content-Type": "application/json"}
         res = requests.post(url, json={"q": query}, headers=headers, timeout=8)
         if res.status_code != 200:
             return ""
@@ -812,9 +813,7 @@ if st.button("SEND", key="send_query_btn"):
                 "css_class": css_class,
             }
         )
-        st.session_state.messages.append(
-            {"type": "ai", "source": source, "text": answer}
-        )
+        st.session_state.messages.append({"type": "ai", "source": source, "text": answer})
 
 # =========================
 # CONVERSATION
@@ -894,7 +893,8 @@ if submitted:
 if st.session_state.last_whatsapp_url:
     st.markdown(
         f"""
-        <a class="cta-link" href="{st.session_state.last_whatsapp_url}" target="_blank">
+        <a href="{st.session_state.last_whatsapp_url}" target="_blank"
+           style="display:block;text-decoration:none;margin-top:12px;">
             <div class="cta-card">
                 {icon_whatsapp()}
                 <div>CLICK TO OPEN WHATSAPP</div>
@@ -913,7 +913,7 @@ st.markdown(
         <div class="float-btn float-wa">{icon_whatsapp()}</div>
     </a>
 
-    <a href="tel:+{WHATSAPP_NUMBER}" aria-label="Call">
+    <a href="tel:{DISPLAY_NUMBER}" aria-label="Call">
         <div class="float-btn float-call">{icon_mobile()}</div>
     </a>
     """,
