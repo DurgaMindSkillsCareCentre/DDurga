@@ -12,9 +12,8 @@ import streamlit as st
 # =========================
 st.set_page_config(page_title="Durga Psychiatric Centre", layout="centered")
 
-# Correct numbers
 WHATSAPP_NUMBER = "917395944527"   # wa.me format, no plus sign
-DISPLAY_NUMBER = "+91 7395944527"   # human-readable display
+DISPLAY_NUMBER = "+91 7395944527"  # human-readable display
 
 SERPER_API_KEY = st.secrets.get("SERPER_API_KEY", os.getenv("SERPER_API_KEY", ""))
 GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", os.getenv("GEMINI_API_KEY", ""))
@@ -123,7 +122,7 @@ st.markdown(
 
     .block-container {
         padding-top: 2.4rem !important;
-        padding-bottom: 330px;
+        padding-bottom: 430px;
     }
 
     .hero-wrap {
@@ -288,10 +287,6 @@ st.markdown(
         box-shadow: 0 8px 22px rgba(0,0,0,0.18);
     }
 
-    .whatsapp-cta:hover {
-        filter: brightness(1.03);
-    }
-
     .float-btn {
         position: fixed;
         right: 18px;
@@ -352,6 +347,37 @@ st.markdown(
         color: white !important;
         text-decoration: none !important;
         display: block;
+    }
+
+    .screening-card {
+        background: rgba(255,255,255,0.14);
+        border-radius: 18px;
+        padding: 16px;
+        margin: 12px 0 18px 0;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+        border: 1px solid rgba(255,255,255,0.16);
+    }
+
+    .mini-note {
+        color: white;
+        font-weight: 600;
+        margin-top: 6px;
+        margin-bottom: 8px;
+    }
+
+    .screening-chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: #111111;
+        color: white !important;
+        font-weight: 900;
+        text-decoration: none !important;
+        width: 100%;
+        margin-bottom: 10px;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.18);
     }
     </style>
     """,
@@ -721,6 +747,83 @@ def dss_score(query):
     return "Stress", "Mild", "Lifestyle care", "dss-green"
 
 # =========================
+# SCREENING MODULE
+# =========================
+def level_from_score(score):
+    if score <= 4:
+        return "Mild", "dss-green", "Self-care and monitor"
+    if score <= 9:
+        return "Moderate", "dss-orange", "Consultation advised"
+    return "Severe", "dss-red", "Please book consultation soon"
+
+def render_screening_result(title, score, max_score):
+    level, css_class, action = level_from_score(score)
+    pct = round((score / max_score) * 100)
+
+    st.markdown(
+        f"""
+        <div class="dss-card {css_class}">
+            <div class="bubble-head">
+                <span class="pill">{icon_brain()}<span>{html_lib.escape(title)}</span></span>
+            </div>
+            <div class="bubble-body">
+                <strong>Score:</strong> {score}/{max_score} ({pct}%)<br>
+                <strong>Level:</strong> {level}<br>
+                <strong>Action:</strong> {action}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        "<div style='color:white;font-weight:700;'>This is a screening tool, not a diagnosis.</div>",
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        f"""
+        <div class="whatsapp-cta-wrap">
+            <a class="whatsapp-cta" href="https://wa.me/{WHATSAPP_NUMBER}" target="_blank" rel="noopener noreferrer">
+                📲 BOOK CONSULTATION ON WHATSAPP
+            </a>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+def run_screening(test_name, questions, prefix):
+    options = [
+        "0 - Not at all",
+        "1 - Several days",
+        "2 - More than half the days",
+        "3 - Nearly every day",
+    ]
+
+    with st.form(f"{prefix}_form", clear_on_submit=False):
+        st.markdown(
+            "<div class='mini-note'>Rate how often you experienced each item in the last 2 weeks.</div>",
+            unsafe_allow_html=True,
+        )
+
+        answers = []
+        for i, q in enumerate(questions):
+            ans = st.radio(
+                q,
+                options=options,
+                index=0,
+                key=f"{prefix}_q_{i}",
+                horizontal=False,
+            )
+            answers.append(options.index(ans))
+
+        submitted = st.form_submit_button(f"Calculate {test_name} Score")
+
+    if submitted:
+        score = sum(answers)
+        render_screening_result(test_name, score, len(questions) * 3)
+
+# =========================
 # RENDERERS
 # =========================
 def render_message_user(text):
@@ -787,6 +890,103 @@ if "messages" not in st.session_state:
 
 if "last_whatsapp_url" not in st.session_state:
     st.session_state.last_whatsapp_url = ""
+
+if "active_test" not in st.session_state:
+    st.session_state.active_test = None
+
+# =========================
+# HEADER / PROFILE
+# =========================
+st.markdown(
+    f"""
+    <div class="hero-wrap">
+        <div class="hero-icon">{icon_brain()}</div>
+        <div class="hero-title">DURGA PSYCHIATRIC CENTRE</div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+col_pic, col_text = st.columns([1, 2])
+
+with col_pic:
+    if os.path.exists("profile.jpg"):
+        st.image("profile.jpg", width=150)
+    else:
+        st.warning("profile.jpg not found")
+
+with col_text:
+    st.markdown(
+        """
+        <div class="profile-name">D. Durga</div>
+        <div class="profile-meta">
+            DPN (Nursing), DAHM, BBA, MBA(HR), MSW<br>
+            Founder & CEO<br>
+            Durga Psychiatric Centre
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+st.divider()
+
+# =========================
+# SCREENING TESTS (VISIBLE ABOVE INPUT)
+# =========================
+render_section_header(icon_brain(), "Screening Tests")
+st.markdown(
+    "<div class='mini-note'>Choose one test below. These buttons stay visible on mobile and do not overlap the footer.</div>",
+    unsafe_allow_html=True,
+)
+
+b1, b2, b3 = st.columns(3)
+if b1.button("Stress Test", use_container_width=True):
+    st.session_state.active_test = "stress"
+if b2.button("Anxiety Test", use_container_width=True):
+    st.session_state.active_test = "anxiety"
+if b3.button("Depression Test", use_container_width=True):
+    st.session_state.active_test = "depression"
+
+stress_questions = [
+    "I feel overwhelmed by my workload.",
+    "I find it hard to relax.",
+    "I feel irritable or easily annoyed.",
+    "I have trouble sleeping because of stress.",
+    "I find it hard to concentrate.",
+]
+
+anxiety_questions = [
+    "I feel nervous or anxious.",
+    "I cannot stop worrying.",
+    "I worry too much about different things.",
+    "I find it hard to relax.",
+    "I feel afraid that something bad may happen.",
+]
+
+depression_questions = [
+    "I feel down, depressed, or hopeless.",
+    "I have little interest or pleasure in doing things.",
+    "I feel tired or have little energy.",
+    "I feel bad about myself or feel like a failure.",
+    "I have trouble concentrating on tasks.",
+]
+
+if st.session_state.active_test == "stress":
+    st.markdown("<div class='screening-card'>", unsafe_allow_html=True)
+    run_screening("Stress Test", stress_questions, "stress")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+elif st.session_state.active_test == "anxiety":
+    st.markdown("<div class='screening-card'>", unsafe_allow_html=True)
+    run_screening("Anxiety Test", anxiety_questions, "anxiety")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+elif st.session_state.active_test == "depression":
+    st.markdown("<div class='screening-card'>", unsafe_allow_html=True)
+    run_screening("Depression Test", depression_questions, "depression")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+st.markdown("<div style='height: 18px;'></div>", unsafe_allow_html=True)
 
 # =========================
 # INPUT SECTION
@@ -888,15 +1088,13 @@ if submitted:
         )
 
         st.session_state.last_whatsapp_url = whatsapp_url
-        
         st.markdown(
-    "<div style='color:white; font-weight:600;'>Click below to open WhatsApp and send the message.</div>",
-    unsafe_allow_html=True
-)
+            "<div style='color:white; font-weight:600;'>Click below to open WhatsApp and send the message.</div>",
+            unsafe_allow_html=True
+        )
     else:
         st.warning("Please enter both Name and Mobile Number.")
 
-# Fixed WhatsApp CTA without raw HTML overlay
 if st.session_state.last_whatsapp_url:
     st.markdown(
         f"""
