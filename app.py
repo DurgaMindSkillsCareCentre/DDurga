@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import streamlit as st
 import requests
 import urllib.parse
@@ -5,35 +7,22 @@ import urllib.parse
 # =========================
 # CONFIG
 # =========================
-st.set_page_config(page_title="Durga AI", layout="centered")
+st.set_page_config(page_title="Durga Psychiatric Centre", layout="centered")
 
-SERPER_API_KEY = "YOUR_SERPER_KEY"
-GEMINI_API_KEY = "YOUR_GEMINI_KEY"
+SERPER_API_KEY = st.secrets.get("SERPER_API_KEY", "")
 
 # =========================
-# UI
+# UI (SAFE)
 # =========================
 st.markdown("""
 <style>
 .stApp {
-    background: linear-gradient(135deg, #4e54c8, #8f94fb);
+    background: linear-gradient(135deg, #5f6dfc, #7b2ff7);
     color: white;
 }
-
 textarea, input {
-    background-color: white !important;
     color: black !important;
-    border-radius: 10px !important;
 }
-
-.stButton>button {
-    background: black;
-    color: white;
-    border-radius: 10px;
-    font-weight: bold;
-}
-
-/* WhatsApp */
 .whatsapp-btn {
     display:block;
     text-align:center;
@@ -44,6 +33,7 @@ textarea, input {
     border-radius:12px;
     text-decoration:none;
     font-weight:bold;
+    margin-top:10px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -51,215 +41,219 @@ textarea, input {
 # =========================
 # HEADER
 # =========================
-st.title("DURGA PSYCHIATRIC CENTRE")
+st.title("🧠 DURGA PSYCHIATRIC CENTRE")
 
-try:
-    st.image("profile.jpg", width=180)
-except:
-    st.warning("Upload profile.jpg")
+# =========================
+# PROFILE
+# =========================
+col1, col2 = st.columns([1,2])
 
-st.markdown("""
+with col1:
+    st.image("profile.jpg", width=120)
+
+with col2:
+    st.markdown("""
 **D.Durga**  
-DPN Nursing, DAHM, BBA, MBA HR, MSW Medical Psychiatry  
-
-Founder and CEO  
+DPN (Nursing), DAHM, BBA, MBA(HR), MSW  
+Founder & CEO  
 Durga Psychiatric Centre
 """)
 
 st.divider()
 
 # =========================
-# UTILS
+# SESSION STATE
 # =========================
-def summarize(text):
-    parts = text.split(".")
-    clean = [p.strip() for p in parts if len(p.strip()) > 25]
-    return ". ".join(clean[:3]) + "." if clean else None
+if "chat" not in st.session_state:
+    st.session_state.chat = []
+
+if "input_box" not in st.session_state:
+    st.session_state.input_box = ""
 
 # =========================
-# SERPER (GOOGLE)
+# INPUT
+# =========================
+st.subheader("Tell me what you're feeling")
+
+user_input = st.text_area("", key="input_box")
+
+# =========================
+# CLINICAL AI
+# =========================
+def clinical_ai(q):
+    q = q.lower()
+    score = 0
+    cond = []
+
+    if any(w in q for w in ["sad", "depress", "hopeless"]):
+        cond.append("Depressive symptoms")
+        score += 3
+
+    if any(w in q for w in ["anxiety", "worry", "panic"]):
+        cond.append("Anxiety symptoms")
+        score += 3
+
+    if any(w in q for w in ["sleep", "insomnia"]):
+        cond.append("Sleep disturbance")
+        score += 2
+
+    if any(w in q for w in ["daily", "severe", "cannot"]):
+        score += 3
+
+    if score >= 7:
+        risk = "High"
+    elif score >= 4:
+        risk = "Moderate"
+    else:
+        risk = "Mild"
+
+    return f"{', '.join(cond) if cond else 'Stress'}. Severity: {risk}. Seek early support."
+
+# =========================
+# WEB AI
 # =========================
 def serper_ai(q):
+    if not SERPER_API_KEY:
+        return None
     try:
         url = "https://google.serper.dev/search"
-        headers = {
-            "X-API-KEY": SERPER_API_KEY,
-            "Content-Type": "application/json"
-        }
-        res = requests.post(url, headers=headers, json={"q": q}, timeout=8)
-
-        if res.status_code != 200:
-            return None
-
+        headers = {"X-API-KEY": SERPER_API_KEY}
+        res = requests.post(url, headers=headers, json={"q": q}, timeout=5)
         data = res.json()
-
-        snippets = []
-        for item in data.get("organic", [])[:3]:
-            if "snippet" in item:
-                snippets.append(item["snippet"])
-
-        if not snippets:
-            return None
-
-        return summarize(" ".join(snippets))
-
+        return data["organic"][0]["snippet"][:180]
     except:
         return None
 
-# =========================
-# WIKIPEDIA (VERY RELIABLE)
-# =========================
 def wiki_ai(q):
     try:
         url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(q)}"
-        res = requests.get(url, timeout=5)
-
-        if res.status_code != 200:
-            return None
-
-        data = res.json()
-
-        return summarize(data.get("extract", ""))
-
+        return requests.get(url, timeout=5).json().get("extract", "")[:180]
     except:
         return None
 
-# =========================
-# DUCKDUCKGO
-# =========================
 def duck_ai(q):
     try:
-        url = "https://api.duckduckgo.com/"
-        res = requests.get(url, params={"q": q, "format": "json"}, timeout=5)
-
-        data = res.json()
-
-        return summarize(data.get("AbstractText", ""))
-
+        url = f"https://api.duckduckgo.com/?q={urllib.parse.quote(q)}&format=json"
+        return requests.get(url, timeout=5).json().get("AbstractText", "")[:180]
     except:
         return None
 
-# =========================
-# GEMINI
-# =========================
-def gemini_ai(q):
-    try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
-
-        payload = {
-            "contents": [{"parts": [{"text": q}]}]
-        }
-
-        res = requests.post(url, json=payload, timeout=8)
-
-        data = res.json()
-
-        text = data["candidates"][0]["content"]["parts"][0]["text"]
-
-        return summarize(text)
-
-    except:
-        return None
-
-# =========================
-# LOCAL AI
-# =========================
-def local_ai(q):
-    q = q.lower()
-
-    if "sleep" in q or "insomnia" in q:
-        return "Insomnia is difficulty sleeping due to stress or irregular routine. Maintain consistent sleep schedule and avoid screens."
-
-    if "anxiety" in q:
-        return "Anxiety is excessive worry without danger. It triggers stress response. Breathing and relaxation techniques help control it."
-
-    if "depress" in q:
-        return "Depression is persistent sadness and low energy. Early support, routine, and therapy help recovery."
-
-    return "Take a slow breath. Focus on one step at a time. You are safe."
-
-# =========================
-# SMART ROUTER
-# =========================
 def smart_ai(q):
+    clinical = clinical_ai(q)
 
-    for func in [serper_ai, wiki_ai, duck_ai, gemini_ai]:
-        result = func(q)
-        if result:
-            return result
+    for func in [serper_ai, wiki_ai, duck_ai]:
+        res = func(q)
+        if res and len(res) > 20:
+            return f"{clinical}\n\n🔎 {res}"
 
-    return local_ai(q)
-
-# =========================
-# STATE
-# =========================
-if "history" not in st.session_state:
-    st.session_state.history = []
-
-if "user_input" not in st.session_state:
-    st.session_state.user_input = ""
+    return clinical
 
 # =========================
 # SEND
 # =========================
 def handle_send():
-    q = st.session_state.user_input.strip()
+    q = st.session_state.input_box.strip()
     if not q:
         return
 
     ans = smart_ai(q)
 
-    st.session_state.history.append(("You", q))
-    st.session_state.history.append(("AI", ans))
+    st.session_state.chat.append(("You", q))
+    st.session_state.chat.append(("AI", ans))
 
-    st.session_state.user_input = ""
+    st.session_state.input_box = ""
 
-# =========================
-# INPUT
-# =========================
-st.subheader("AI Mental Health Assistant")
-
-st.text_area("Tell me what you're feeling", key="user_input")
-
-st.button("SEND", on_click=handle_send)
+st.button("SEND", on_click=handle_send, use_container_width=True)
 
 # =========================
 # CHAT
 # =========================
+st.markdown("### 💬 Conversation")
+
 with st.container():
-    for role, msg in st.session_state.history:
+    for role, msg in st.session_state.chat:
         st.write(f"**{role}:** {msg}")
 
 # =========================
-# SPACE FIX
+# SPACING
 # =========================
-st.markdown("<br><br><br>", unsafe_allow_html=True)
+st.markdown("<br><br>", unsafe_allow_html=True)
 st.divider()
 
 # =========================
-# CONSULT FORM
+# FORM
 # =========================
-with st.container():
-    st.subheader("Book Consultation")
+st.header("📞 Book Consultation")
 
-    name = st.text_input("Name")
-    phone = st.text_input("Mobile Number")
-    concern = st.selectbox(
-        "Concern",
-        ["Stress", "Anxiety", "Depression", "Sleep Issues"]
-    )
+name = st.text_input("Name")
+phone = st.text_input("Mobile Number")
 
-    if st.button("Submit"):
-        if name and phone:
-            msg = urllib.parse.quote(
-                f"Name: {name}\nPhone: {phone}\nConcern: {concern}"
-            )
+concern = st.selectbox("Concern", [
+    "Stress", "Anxiety", "Depression", "Panic Disorder",
+    "OCD", "Bipolar Disorder", "PTSD", "ADHD",
+    "Sleep Disorder", "Relationship Issues",
+    "Addiction", "Sexual Health Issues", "Other"
+])
 
-            wa_url = f"https://wa.me/917395944527?text={msg}"
+mode = st.radio("Session Mode", ["Online", "In-Person"])
 
-            st.markdown(
-                f'<a class="whatsapp-btn" href="{wa_url}" target="_blank">CLICK TO OPEN WHATSAPP</a>',
-                unsafe_allow_html=True
-            )
-        else:
-            st.warning("Fill all details")
+time_slot = st.selectbox("Preferred Time", ["Morning", "Afternoon", "Evening"])
+
+location = ""
+if mode == "In-Person":
+    location = st.text_input("Location / Area")
+
+# =========================
+# SUBMIT
+# =========================
+if st.button("Submit", use_container_width=True):
+
+    if name and phone:
+
+        message = f"""I would like to request an appointment with Psychologist D.Durga.
+
+Name: {name}
+Mobile: {phone}
+Concern: {concern}
+
+Preferred Mode: {mode}
+Preferred Time: {time_slot}
+"""
+
+        if mode == "In-Person":
+            message += f"\nLocation: {location}"
+
+        message += "\n\nPlease call back to confirm the appointment."
+
+        encoded_msg = urllib.parse.quote(message)
+        wa_url = f"https://wa.me/917395944527?text={encoded_msg}"
+
+        st.markdown(
+            f'<a class="whatsapp-btn" href="{wa_url}" target="_blank">CLICK TO OPEN WHATSAPP</a>',
+            unsafe_allow_html=True
+        )
+
+    else:
+        st.warning("Please fill all required details")
+
+# =========================
+# FLOATING WHATSAPP
+# =========================
+st.markdown("""
+<a href="https://wa.me/917395944527" target="_blank">
+<div style="position:fixed;bottom:90px;right:20px;background:#25D366;
+color:white;padding:15px;border-radius:50%;font-size:20px;">
+💬
+</div>
+</a>
+""", unsafe_allow_html=True)
+
+# =========================
+# STICKY BAR
+# =========================
+st.markdown("""
+<div style="position:fixed;bottom:0;width:100%;background:black;color:white;
+text-align:center;padding:10px;">
+📞 Book Consultation | WhatsApp: +91 7395944527
+</div>
+""", unsafe_allow_html=True)
