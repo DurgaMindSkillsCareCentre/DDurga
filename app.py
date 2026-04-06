@@ -888,7 +888,11 @@ if submitted:
         )
 
         st.session_state.last_whatsapp_url = whatsapp_url
-        st.success("Click below to open WhatsApp and send the message.")
+        
+        st.markdown(
+    "<div style='color:white; font-weight:600;'>Click below to open WhatsApp and send the message.</div>",
+    unsafe_allow_html=True
+)
     else:
         st.warning("Please enter both Name and Mobile Number.")
 
