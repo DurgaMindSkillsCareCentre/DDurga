@@ -21,7 +21,6 @@ st.markdown("""
 .block-container { padding-bottom:120px; }
 label { color:white !important; }
 
-/* Mic button */
 .mic-btn {
  width:110px;height:110px;border-radius:50%;
  background:#25D366;
@@ -29,14 +28,12 @@ label { color:white !important; }
  font-size:40px;color:white;margin:auto;
 }
 
-/* Footer */
 .footer {
  position:fixed;bottom:0;width:100%;
  background:black;color:white;text-align:center;
  padding:10px;z-index:9999;
 }
 
-/* Floating buttons */
 .float-w {
  position:fixed;bottom:90px;right:20px;
  background:#25D366;width:60px;height:60px;
@@ -93,13 +90,17 @@ def serper(q):
 
 def duck(q):
     try:
-        return requests.get(f"https://api.duckduckgo.com/?q={q}&format=json").json().get("AbstractText","")
+        return requests.get(
+            f"https://api.duckduckgo.com/?q={q}&format=json"
+        ).json().get("AbstractText","")
     except:
         return ""
 
 def wiki(q):
     try:
-        return requests.get(f"https://en.wikipedia.org/api/rest_v1/page/summary/{q}").json().get("extract","")
+        return requests.get(
+            f"https://en.wikipedia.org/api/rest_v1/page/summary/{q}"
+        ).json().get("extract","")
     except:
         return ""
 
@@ -212,7 +213,7 @@ Time: {time}
 Location: {loc}
 """
 
-        url = f"https://wa.me/{WHATSAPP_NUMBER}?text={urllib.parse.quote(msg)}
+        url = f"https://wa.me/{WHATSAPP_NUMBER}?text={urllib.parse.quote(msg)}"
 
         st.markdown(f'<meta http-equiv="refresh" content="0; url={url}">', unsafe_allow_html=True)
 
