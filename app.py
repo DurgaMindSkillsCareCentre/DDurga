@@ -6,11 +6,85 @@ import urllib.parse
 
 import requests
 import streamlit as st
-
+import time
 # =========================
 # CONFIG
 # =========================
 st.set_page_config(page_title="Durga Psychiatric Centre", layout="centered")
+# ===== SPLASH SCREEN =====
+splash = st.empty()
+
+with splash.container():
+    st.markdown(
+        """
+        <style>
+        .splash-wrap{
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            background: linear-gradient(135deg, #5f6dfc, #7b2ff7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: white;
+        }
+        .splash-logo{
+            width: 92px;
+            height: 92px;
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.16);
+            box-shadow: 0 14px 30px rgba(0,0,0,0.22);
+            font-size: 44px;
+            margin-bottom: 18px;
+            animation: popIn 0.7s ease-out;
+        }
+        .splash-title{
+            font-size: 2rem;
+            font-weight: 900;
+            text-align: center;
+            line-height: 1.1;
+            letter-spacing: 0.02em;
+        }
+        .splash-sub{
+            margin-top: 10px;
+            font-size: 1rem;
+            opacity: 0.95;
+            text-align: center;
+        }
+        .loader{
+            margin-top: 22px;
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            border: 5px solid rgba(255,255,255,0.25);
+            border-top-color: white;
+            animation: spin 0.9s linear infinite;
+        }
+        @keyframes spin{
+            to{transform: rotate(360deg);}
+        }
+        @keyframes popIn{
+            from{transform: scale(0.75); opacity: 0;}
+            to{transform: scale(1); opacity: 1;}
+        }
+        </style>
+
+        <div class="splash-wrap">
+            <div class="splash-logo">🧠</div>
+            <div class="splash-title">Durga Psychiatric Centre</div>
+            <div class="splash-sub">Loading your clinic assistant...</div>
+            <div class="loader"></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+time.sleep(1.5)
+splash.empty()
 st.markdown("""
 <style>
 
