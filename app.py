@@ -1,36 +1,62 @@
 # -*- coding: utf-8 -*-
-import streamlit as st
+import os, re, html, urllib.parse
 import requests
-import urllib.parse
-import re
+import streamlit as st
 
-# ================= CONFIG =================
-WHATSAPP_NUMBER = "917395944527"
-SERPER_API_KEY = "YOUR_SERPER_KEY"
-GEMINI_API_KEY = "YOUR_GEMINI_KEY"
-
-# ================= PAGE =================
 st.set_page_config(page_title="Durga Psychiatric Centre", layout="centered")
 
-# ================= STYLE =================
+WHATSAPP_NUMBER = "917395944527"
+SERPER_API_KEY = st.secrets.get("SERPER_API_KEY", "")
+GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
+
+# ================= UI =================
 st.markdown("""
 <style>
-.stApp {background: linear-gradient(135deg,#5f6dfc,#7b2ff7); color:white;}
+.stApp {background: linear-gradient(135deg,#5f6dfc,#7b2ff7);color:white;}
+.block-container{padding-bottom:260px;}
 
-.user {background:#111;padding:12px;border-radius:12px;margin:6px;text-align:right;}
-.ai {background:#ffffff22;padding:12px;border-radius:12px;margin:6px;}
+.stButton>button{
+background:#000;color:white;border-radius:12px;
+font-weight:800;padding:10px 18px;font-size:16px;
+}
 
-.green {background:#00c853;padding:12px;border-radius:12px;color:white;}
-.orange {background:#ff9800;padding:12px;border-radius:12px;color:white;}
-.red {background:#e53935;padding:12px;border-radius:12px;color:white;}
+textarea,input{color:black!important;}
 
-.stButton button {background:black;color:white;font-size:18px;}
+.bubble{border-radius:18px;padding:14px;margin:10px 0;}
+.user{background:#111;color:white;}
+.ai{background:rgba(255,255,255,0.15);}
+
+.dss-green{background:#12c24f;padding:14px;border-radius:16px;}
+.dss-orange{background:#ff9800;padding:14px;border-radius:16px;}
+.dss-red{background:#e53935;padding:14px;border-radius:16px;}
+
+.footer-bar{
+position:fixed;bottom:0;width:100%;
+background:#000;padding:14px;
+}
+.footer-btn{
+display:flex;justify-content:center;align-items:center;
+gap:12px;background:#25D366;
+padding:20px;font-size:20px;
+font-weight:900;border-radius:16px;
+color:white;text-decoration:none;
+}
+
+.float{
+position:fixed;right:18px;width:60px;height:60px;
+border-radius:50%;display:flex;align-items:center;justify-content:center;
+z-index:999;
+}
+.whatsapp{bottom:90px;background:#25D366;}
+.call{bottom:160px;background:#0a84ff;}
 </style>
 """, unsafe_allow_html=True)
 
 # ================= HEADER =================
-st.markdown("##  DURGA PSYCHIATRIC CENTRE")
-st.image("profile.jpg", width=130)
+st.title("🧠 DURGA PSYCHIATRIC CENTRE")
+
+if os.path.exists("profile.jpg"):
+    st.image("profile.jpg", width=150)
 
 st.markdown("""
 **D. Durga**  
@@ -39,142 +65,114 @@ Founder & CEO
 Durga Psychiatric Centre
 """)
 
-# ================= CLEAN =================
+# ================= AI =================
 def clean(text):
-    if not text: return ""
-    text = re.sub(r'\s+', ' ', text)
-    return " ".join(text.split('.')[:3])
+    text = re.sub(r"\s+"," ",str(text))
+    return text.strip()
 
-def valid(x):
-    return x and len(x.strip()) > 40
+def summary(text):
+    s = re.split(r'[.!?]', text)
+    return "\n".join([i.strip() for i in s if len(i)>10][:3])
 
-# ================= WEB AI =================
 def serper(q):
+    if not SERPER_API_KEY: return ""
     try:
-        url = "https://google.serper.dev/search"
-        headers = {"X-API-KEY": SERPER_API_KEY}
-        r = requests.post(url, json={"q": q}, headers=headers, timeout=8)
-        data = r.json()
-        return clean(data["organic"][0]["snippet"])
-    except:
-        return ""
+        r = requests.post("https://google.serper.dev/search",
+        headers={"X-API-KEY":SERPER_API_KEY},
+        json={"q":q})
+        data=r.json()
+        return summary(str(data))
+    except: return ""
 
-def duck(q):
+def ddg(q):
     try:
-        r = requests.get(f"https://api.duckduckgo.com/?q={q}&format=json", timeout=8)
-        return clean(r.json().get("AbstractText",""))
-    except:
-        return ""
+        r=requests.get(f"https://api.duckduckgo.com/?q={q}&format=json")
+        return summary(r.json().get("AbstractText",""))
+    except: return ""
 
 def wiki(q):
     try:
-        q = q.replace(" ","_")
-        r = requests.get(f"https://en.wikipedia.org/api/rest_v1/page/summary/{q}", timeout=8)
-        return clean(r.json().get("extract",""))
-    except:
-        return ""
+        r=requests.get(f"https://en.wikipedia.org/api/rest_v1/page/summary/{q}")
+        return summary(r.json().get("extract",""))
+    except: return ""
 
 def gemini(q):
-    MODELS = [
-        "models/gemini-2.0-flash",
-        "models/gemini-flash-latest"
-    ]
+    if not GEMINI_API_KEY: return ""
+    try:
+        url=f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
+        r=requests.post(url,json={"contents":[{"parts":[{"text":q}]}]})
+        return summary(r.json()['candidates'][0]['content']['parts'][0]['text'])
+    except: return ""
 
-    for m in MODELS:
-        try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/{m}:generateContent?key={GEMINI_API_KEY}"
-            payload = {
-                "contents":[{"parts":[{"text":q}]}]
-            }
-            r = requests.post(url, json=payload, timeout=10)
-            if r.status_code == 200:
-                return clean(r.json()["candidates"][0]["content"]["parts"][0]["text"])
-        except:
-            continue
-    return ""
+def local(q):
+    return "Take a slow breath.\nYou are safe.\nFocus on one step."
 
-# ================= LOCAL =================
-def local_ai(q):
-    return "Take a slow breath. You are safe. Focus on one small step."
-
-# ================= MASTER =================
-def smart_ai(q):
-
-    s = serper(q)
-    if valid(s): return s
-
-    d = duck(q)
-    if valid(d): return d
-
-    w = wiki(q)
-    if valid(w): return w
-
-    g = gemini(q)
-    if valid(g): return g
-
-    return local_ai(q)
+def AI(q):
+    for fn in [serper,ddg,wiki,gemini]:
+        res=fn(q)
+        if len(res)>20:
+            return res
+    return local(q)
 
 # ================= DSS =================
 def dss(q):
     q=q.lower()
-
-    if "suicide" in q:
-        return "Suicidal Risk","Severe","Immediate help required","red"
-    if "depress" in q:
-        return "Depression","Moderate","Consult psychologist","orange"
-    if "anxiety" in q:
-        return "Anxiety","Mild","Relaxation advised","green"
-
-    return "Stress","Mild","Lifestyle care","green"
-
-# ================= STATE =================
-if "chat" not in st.session_state:
-    st.session_state.chat=[]
+    if "suicide" in q: return ("Suicidal Risk","Critical","Immediate help","dss-red")
+    if "depress" in q: return ("Depression","Moderate","Consult","dss-orange")
+    return ("Stress","Mild","Lifestyle","dss-green")
 
 # ================= INPUT =================
-st.subheader(" Enter your problem")
-q = st.text_area("Type here")
+st.subheader("💬 Enter your problem")
+query=st.text_area("Type here")
 
-# ================= SEND =================
 if st.button("SEND"):
-    if q.strip():
+    if query:
+        cond,sev,act,css=dss(query)
 
-        cond, sev, adv, color = dss(q)
-        ai = smart_ai(q)
+        st.markdown(f'<div class="bubble user">{query}</div>',unsafe_allow_html=True)
 
-        st.session_state.chat.append(("user",q))
-        st.session_state.chat.append(("dss",(cond,sev,adv,color)))
-        st.session_state.chat.append(("ai",ai))
-
-# ================= CHAT =================
-st.subheader(" Conversation")
-
-for role,msg in st.session_state.chat:
-
-    if role=="user":
-        st.markdown(f'<div class="user"> {msg}</div>',unsafe_allow_html=True)
-
-    elif role=="dss":
-        c,s,a,col = msg
         st.markdown(f"""
-        <div class="{col}">
-         Condition: {c}<br>
-         Severity: {s}<br>
-         Action: {a}
+        <div class="{css}">
+        Condition: {cond}<br>
+        Severity: {sev}<br>
+        Action: {act}
         </div>
-        """, unsafe_allow_html=True)
+        """,unsafe_allow_html=True)
 
-    else:
-        st.markdown(f'<div class="ai"> {msg}</div>',unsafe_allow_html=True)
+        st.markdown(f'<div class="bubble ai">{AI(query)}</div>',unsafe_allow_html=True)
 
-# ================= WHATSAPP =================
-st.markdown("---")
+# ================= FORM =================
+st.subheader("📞 Book Consultation")
 
+name=st.text_input("Name")
+phone=st.text_input("Mobile")
+cause=st.selectbox("Concern",["Stress","Depression","Anxiety","Addiction","Relationship","Sexual","Other"])
+
+if st.button("Submit Consultation"):
+    msg=f"""I would like to request an appointment with Psychologist D.Durga.
+
+Name: {name}
+Mobile: {phone}
+Cause: {cause}
+
+Please call back."""
+    url=f"https://wa.me/{WHATSAPP_NUMBER}?text={urllib.parse.quote(msg)}"
+    st.markdown(f'<a href="{url}" target="_blank" class="footer-btn">CLICK TO OPEN WHATSAPP</a>',unsafe_allow_html=True)
+
+# ================= FLOAT =================
 st.markdown(f"""
-<a href="https://wa.me/{WHATSAPP_NUMBER}">
-<div style="background:#25D366;padding:18px;text-align:center;
-color:white;font-size:20px;border-radius:10px;">
- CLICK TO OPEN WHATSAPP
-</div>
+<a href="https://wa.me/{WHATSAPP_NUMBER}" target="_blank">
+<div class="float whatsapp">💬</div></a>
+
+<a href="tel:+{WHATSAPP_NUMBER}">
+<div class="float call">📞</div></a>
+""",unsafe_allow_html=True)
+
+# ================= FOOTER =================
+st.markdown(f"""
+<div class="footer-bar">
+<a href="https://wa.me/{WHATSAPP_NUMBER}" target="_blank" class="footer-btn">
+📞 💬 BOOK CONSULTATION NOW
 </a>
-""", unsafe_allow_html=True)
+</div>
+""",unsafe_allow_html=True)
