@@ -17,7 +17,7 @@ SERPER_API_KEY = st.secrets.get("SERPER_API_KEY", os.getenv("SERPER_API_KEY", ""
 GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", os.getenv("GEMINI_API_KEY", ""))
 
 # =========================
-# SVG ICONS
+# SVG ICONS (mobile-safe)
 # =========================
 def icon_brain():
     return """
@@ -39,8 +39,9 @@ def icon_chat():
 def icon_phone():
     return """
     <svg width="30" height="30" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <rect x="22" y="8" width="10" height="20" rx="5" transform="rotate(45 27 18)" fill="white"/>
-      <rect x="34" y="22" width="10" height="20" rx="5" transform="rotate(45 39 32)" fill="white"/>
+      <path d="M20 11h24a4 4 0 0 1 4 4v34a4 4 0 0 1-4 4H20a4 4 0 0 1-4-4V15a4 4 0 0 1 4-4z" fill="white"/>
+      <rect x="27" y="14" width="10" height="2" rx="1" fill="#7b2ff7"/>
+      <circle cx="32" cy="45" r="3" fill="#7b2ff7"/>
     </svg>
     """
 
@@ -87,8 +88,8 @@ st.markdown(
     }
 
     .block-container {
-        padding-top: 1.2rem;
-        padding-bottom: 260px;
+        padding-top: 2.4rem !important;
+        padding-bottom: 320px;
     }
 
     .hero-wrap {
@@ -111,13 +112,6 @@ st.markdown(
         line-height: 1.05;
         color: white;
         letter-spacing: 0.02em;
-    }
-
-    .profile-card {
-        display: flex;
-        gap: 16px;
-        align-items: flex-start;
-        margin: 14px 0 10px 0;
     }
 
     .profile-name {
@@ -157,10 +151,12 @@ st.markdown(
     .stButton > button {
         background: #111111 !important;
         color: white !important;
-        border-radius: 12px !important;
-        font-weight: 800 !important;
-        padding: 0.75rem 1.2rem !important;
+        border-radius: 14px !important;
+        font-weight: 900 !important;
+        padding: 1rem 1.4rem !important;
+        font-size: 1.05rem !important;
         border: 1px solid rgba(255,255,255,0.08) !important;
+        width: 100% !important;
     }
 
     .stTextArea textarea,
@@ -308,11 +304,6 @@ st.markdown(
         letter-spacing: 0.5px;
     }
 
-    .footer-btn:hover {
-        transform: scale(1.02);
-        background: linear-gradient(90deg, #20c15a, #18a94f);
-    }
-
     .footer-icon {
         display: flex;
         align-items: center;
@@ -327,6 +318,9 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+# spacer
+st.markdown("<div style='height:18px;'></div>", unsafe_allow_html=True)
 
 # =========================
 # HEADER
@@ -475,10 +469,8 @@ def serper_search(query):
                     pieces.append(answer_box.get(key))
 
         knowledge = data.get("knowledgeGraph") or {}
-        if isinstance(knowledge, dict):
-            for key in ("description",):
-                if knowledge.get(key):
-                    pieces.append(knowledge.get(key))
+        if isinstance(knowledge, dict) and knowledge.get("description"):
+            pieces.append(knowledge.get("description"))
 
         organic = data.get("organic") or []
         for item in organic[:3]:
@@ -778,12 +770,7 @@ if st.button("SEND", key="send_query_btn"):
         condition, severity, action, css_class = dss_score(query)
         source, answer = smart_ai(query)
 
-        st.session_state.messages.append(
-            {
-                "type": "user",
-                "text": query,
-            }
-        )
+        st.session_state.messages.append({"type": "user", "text": query})
         st.session_state.messages.append(
             {
                 "type": "dss",
@@ -794,11 +781,7 @@ if st.button("SEND", key="send_query_btn"):
             }
         )
         st.session_state.messages.append(
-            {
-                "type": "ai",
-                "source": source,
-                "text": answer,
-            }
+            {"type": "ai", "source": source, "text": answer}
         )
 
 # =========================
