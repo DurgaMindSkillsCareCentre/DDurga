@@ -1,178 +1,924 @@
 # -*- coding: utf-8 -*-
-import os, re, html, urllib.parse
+import os
+import re
+import html as html_lib
+import urllib.parse
+
 import requests
 import streamlit as st
 
+# =========================
+# CONFIG
+# =========================
 st.set_page_config(page_title="Durga Psychiatric Centre", layout="centered")
 
 WHATSAPP_NUMBER = "917395944527"
-SERPER_API_KEY = st.secrets.get("SERPER_API_KEY", "")
-GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
+SERPER_API_KEY = st.secrets.get("SERPER_API_KEY", os.getenv("SERPER_API_KEY", ""))
+GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", os.getenv("GEMINI_API_KEY", ""))
 
-# ================= UI =================
-st.markdown("""
-<style>
-.stApp {background: linear-gradient(135deg,#5f6dfc,#7b2ff7);color:white;}
-.block-container{padding-bottom:260px;}
+# =========================
+# SVG ICONS
+# =========================
+def icon_brain():
+    return """
+    <svg width="34" height="34" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="23" cy="23" r="12" fill="white"/>
+      <circle cx="41" cy="23" r="12" fill="white"/>
+      <rect x="14" y="25" width="36" height="22" rx="11" fill="white"/>
+      <path d="M24 16v32M40 16v32M32 14v36" stroke="#7b2ff7" stroke-width="3" stroke-linecap="round"/>
+    </svg>
+    """
 
-.stButton>button{
-background:#000;color:white;border-radius:12px;
-font-weight:800;padding:10px 18px;font-size:16px;
-}
+def icon_chat():
+    return """
+    <svg width="30" height="30" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M10 14h44a8 8 0 0 1 8 8v18a8 8 0 0 1-8 8H28l-10 8v-8H10a8 8 0 0 1-8-8V22a8 8 0 0 1 8-8z" fill="white"/>
+    </svg>
+    """
 
-textarea,input{color:black!important;}
+def icon_phone():
+    return """
+    <svg width="30" height="30" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="22" y="8" width="10" height="20" rx="5" transform="rotate(45 27 18)" fill="white"/>
+      <rect x="34" y="22" width="10" height="20" rx="5" transform="rotate(45 39 32)" fill="white"/>
+    </svg>
+    """
 
-.bubble{border-radius:18px;padding:14px;margin:10px 0;}
-.user{background:#111;color:white;}
-.ai{background:rgba(255,255,255,0.15);}
+def icon_user():
+    return """
+    <svg width="28" height="28" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="32" cy="22" r="11" fill="white"/>
+      <path d="M14 54c2-11 10-16 18-16s16 5 18 16" fill="white"/>
+    </svg>
+    """
 
-.dss-green{background:#12c24f;padding:14px;border-radius:16px;}
-.dss-orange{background:#ff9800;padding:14px;border-radius:16px;}
-.dss-red{background:#e53935;padding:14px;border-radius:16px;}
+def icon_bot():
+    return """
+    <svg width="28" height="28" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="14" y="16" width="36" height="28" rx="10" fill="white"/>
+      <circle cx="26" cy="29" r="3" fill="#7b2ff7"/>
+      <circle cx="38" cy="29" r="3" fill="#7b2ff7"/>
+      <rect x="30" y="8" width="4" height="8" rx="2" fill="white"/>
+      <circle cx="32" cy="6" r="3" fill="white"/>
+    </svg>
+    """
 
-.footer-bar{
-position:fixed;bottom:0;width:100%;
-background:#000;padding:14px;
-}
-.footer-btn{
-display:flex;justify-content:center;align-items:center;
-gap:12px;background:#25D366;
-padding:20px;font-size:20px;
-font-weight:900;border-radius:16px;
-color:white;text-decoration:none;
-}
+def icon_whatsapp():
+    return """
+    <svg width="28" height="28" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M32 6C18.8 6 8 16.3 8 29.1c0 4.6 1.4 9 3.9 12.7L8 58l16.8-3.7c3.5 2 7.5 3.1 12.1 3.1 13.2 0 24-10.3 24-23.1S45.2 6 32 6z" fill="white"/>
+      <path d="M26 20c1.2-1.2 2.4-1.1 3.4.1l2.8 3.6c.7.9.7 2-.1 2.8l-1.7 1.8c-.4.4-.5 1-.2 1.5 1.4 2.6 3.4 4.8 6 6.3.5.3 1.1.2 1.5-.2l1.8-1.7c.8-.8 1.9-.8 2.8-.1l3.6 2.8c1.2 1 1.3 2.2.1 3.4l-1.1 1.1c-1.1 1.1-2.6 1.7-4.1 1.5-4-.5-8.1-2.9-11.6-6.4-3.5-3.5-5.9-7.6-6.4-11.6-.2-1.5.4-3 1.5-4.1l1.1-1.1z" fill="#25D366"/>
+    </svg>
+    """
 
-.float{
-position:fixed;right:18px;width:60px;height:60px;
-border-radius:50%;display:flex;align-items:center;justify-content:center;
-z-index:999;
-}
-.whatsapp{bottom:90px;background:#25D366;}
-.call{bottom:160px;background:#0a84ff;}
-</style>
-""", unsafe_allow_html=True)
+# =========================
+# STYLE
+# =========================
+st.markdown(
+    """
+    <style>
+    html, body, [class*="css"] {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+    }
 
-# ================= HEADER =================
-st.title("🧠 DURGA PSYCHIATRIC CENTRE")
+    .stApp {
+        background: linear-gradient(135deg, #5f6dfc, #7b2ff7);
+        color: white;
+    }
 
-if os.path.exists("profile.jpg"):
-    st.image("profile.jpg", width=150)
+    .block-container {
+        padding-top: 1.2rem;
+        padding-bottom: 260px;
+    }
 
-st.markdown("""
-**D. Durga**  
-DPN (Nursing), DAHM, BBA, MBA(HR), MSW  
-Founder & CEO  
-Durga Psychiatric Centre
-""")
+    .hero-wrap {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 14px;
+    }
 
-# ================= AI =================
-def clean(text):
-    text = re.sub(r"\s+"," ",str(text))
+    .hero-icon {
+        width: 38px;
+        height: 38px;
+        flex: 0 0 38px;
+        margin-top: 4px;
+    }
+
+    .hero-title {
+        font-size: clamp(1.9rem, 5vw, 3rem);
+        font-weight: 900;
+        line-height: 1.05;
+        color: white;
+        letter-spacing: 0.02em;
+    }
+
+    .profile-card {
+        display: flex;
+        gap: 16px;
+        align-items: flex-start;
+        margin: 14px 0 10px 0;
+    }
+
+    .profile-name {
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: white;
+        margin-bottom: 6px;
+    }
+
+    .profile-meta {
+        font-size: 1rem;
+        line-height: 1.55;
+        color: white;
+        opacity: 0.98;
+    }
+
+    .section-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 18px 0 14px 0;
+    }
+
+    .section-icon {
+        width: 34px;
+        height: 34px;
+        flex: 0 0 34px;
+    }
+
+    .section-title {
+        font-size: clamp(1.5rem, 4.5vw, 2.2rem);
+        font-weight: 900;
+        line-height: 1.1;
+        color: white;
+    }
+
+    .stButton > button {
+        background: #111111 !important;
+        color: white !important;
+        border-radius: 12px !important;
+        font-weight: 800 !important;
+        padding: 0.75rem 1.2rem !important;
+        border: 1px solid rgba(255,255,255,0.08) !important;
+    }
+
+    .stTextArea textarea,
+    .stTextInput input,
+    .stSelectbox div,
+    .stRadio div {
+        color: #111 !important;
+    }
+
+    .bubble {
+        border-radius: 18px;
+        padding: 14px 16px;
+        margin: 10px 0 14px 0;
+        word-break: break-word;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+    }
+
+    .bubble-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+        font-weight: 800;
+    }
+
+    .bubble-body {
+        font-size: 1.02rem;
+        line-height: 1.6;
+        white-space: normal;
+    }
+
+    .user-bubble {
+        background: #111111;
+        color: white;
+    }
+
+    .ai-bubble {
+        background: rgba(255, 255, 255, 0.16);
+        color: white;
+    }
+
+    .dss-card {
+        border-radius: 18px;
+        padding: 14px 16px;
+        margin: 10px 0 14px 0;
+        line-height: 1.65;
+        font-size: 1.02rem;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+    }
+
+    .dss-green {
+        background: #12c24f;
+        color: white;
+    }
+
+    .dss-orange {
+        background: #ff9800;
+        color: white;
+    }
+
+    .dss-red {
+        background: #e53935;
+        color: white;
+    }
+
+    .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 12px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.16);
+        font-size: 0.92rem;
+        font-weight: 800;
+    }
+
+    .cta-link {
+        text-decoration: none !important;
+    }
+
+    .cta-card {
+        background: #25D366;
+        color: white !important;
+        padding: 18px 18px;
+        text-align: center;
+        border-radius: 14px;
+        font-size: 1.06rem;
+        font-weight: 900;
+        box-shadow: 0 10px 28px rgba(0,0,0,0.18);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 12px;
+    }
+
+    .float-btn {
+        position: fixed;
+        right: 18px;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.22);
+    }
+
+    .float-wa {
+        bottom: 92px;
+        background: #25D366;
+    }
+
+    .float-call {
+        bottom: 164px;
+        background: #0a84ff;
+    }
+
+    .footer-bar {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        z-index: 9998;
+        background: linear-gradient(90deg, #000000, #1a1a1a);
+        padding: 16px 12px;
+        box-shadow: 0 -8px 25px rgba(0,0,0,0.35);
+    }
+
+    .footer-btn {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        background: linear-gradient(90deg, #25D366, #1ebe5d);
+        color: white !important;
+        font-size: 1.2rem;
+        font-weight: 900;
+        padding: 18px 20px;
+        border-radius: 16px;
+        text-decoration: none !important;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+        letter-spacing: 0.5px;
+    }
+
+    .footer-btn:hover {
+        transform: scale(1.02);
+        background: linear-gradient(90deg, #20c15a, #18a94f);
+    }
+
+    .footer-icon {
+        display: flex;
+        align-items: center;
+    }
+
+    .footer-bar a {
+        color: white !important;
+        text-decoration: none !important;
+        display: block;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+# =========================
+# HEADER
+# =========================
+st.markdown(
+    f"""
+    <div class="hero-wrap">
+        <div class="hero-icon">{icon_brain()}</div>
+        <div class="hero-title">DURGA PSYCHIATRIC CENTRE</div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+col_pic, col_text = st.columns([1, 2])
+
+with col_pic:
+    if os.path.exists("profile.jpg"):
+        st.image("profile.jpg", width=150)
+    else:
+        st.warning("profile.jpg not found")
+
+with col_text:
+    st.markdown(
+        """
+        <div class="profile-name">D. Durga</div>
+        <div class="profile-meta">
+            DPN (Nursing), DAHM, BBA, MBA(HR), MSW<br>
+            Founder & CEO<br>
+            Durga Psychiatric Centre
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+st.divider()
+
+# =========================
+# HELPERS
+# =========================
+NOISE_PHRASES = [
+    "skip to main content",
+    "skip to content",
+    "search the website",
+    "search the",
+    "menu",
+    "home",
+    "contact us",
+    "about us",
+    "log in",
+    "login",
+    "sign in",
+    "privacy policy",
+    "terms of use",
+]
+
+def normalize_text(text):
+    if not text:
+        return ""
+    text = html_lib.unescape(str(text))
+    text = re.sub(r"\s+", " ", text)
     return text.strip()
 
-def summary(text):
-    s = re.split(r'[.!?]', text)
-    return "\n".join([i.strip() for i in s if len(i)>10][:3])
+def strip_noise(text):
+    text = normalize_text(text)
+    for phrase in NOISE_PHRASES:
+        text = re.sub(re.escape(phrase), " ", text, flags=re.I)
+    text = re.sub(r"\s+", " ", text).strip(" -|:;,.")
+    return text
 
-def serper(q):
-    if not SERPER_API_KEY: return ""
+def looks_noisy(fragment):
+    low = fragment.lower()
+    if any(p in low for p in NOISE_PHRASES):
+        return True
+    if low.startswith(("home ", "menu ", "search ")):
+        return True
+    return False
+
+def make_three_to_five_lines(text):
+    text = strip_noise(text)
+    if not text:
+        return ""
+
+    parts = re.split(r"(?<=[.!?])\s+|\n+|[•|]+", text)
+    lines = []
+
+    for part in parts:
+        part = part.strip(" -–—:;,.")
+        if not part or looks_noisy(part):
+            continue
+        if len(part.split()) >= 4:
+            lines.append(part)
+        if len(lines) == 5:
+            break
+
+    if len(lines) < 3:
+        clauses = re.split(r"\s-\s|;\s*|:\s*|\s\|\s*", text)
+        for clause in clauses:
+            clause = clause.strip(" -–—:;,.")
+            if not clause or looks_noisy(clause):
+                continue
+            if len(clause.split()) >= 4 and clause not in lines:
+                lines.append(clause)
+            if len(lines) == 5:
+                break
+
+    if len(lines) < 3:
+        words = text.split()
+        if words:
+            step = max(10, len(words) // 3 or 10)
+            for i in range(0, min(len(words), step * 5), step):
+                chunk = " ".join(words[i : i + step]).strip()
+                if chunk and chunk not in lines:
+                    lines.append(chunk)
+                if len(lines) == 5:
+                    break
+
+    return "\n".join(lines[:5]).strip()
+
+def valid_answer(text):
+    return bool(text and len(text.strip()) >= 25)
+
+# =========================
+# WEB AI SOURCES
+# =========================
+def serper_search(query):
+    if not SERPER_API_KEY:
+        return ""
     try:
-        r = requests.post("https://google.serper.dev/search",
-        headers={"X-API-KEY":SERPER_API_KEY},
-        json={"q":q})
-        data=r.json()
-        return summary(str(data))
-    except: return ""
+        url = "https://google.serper.dev/search"
+        headers = {
+            "X-API-KEY": SERPER_API_KEY,
+            "Content-Type": "application/json",
+        }
+        res = requests.post(url, json={"q": query}, headers=headers, timeout=8)
+        if res.status_code != 200:
+            return ""
 
-def ddg(q):
+        data = res.json()
+        pieces = []
+
+        answer_box = data.get("answerBox") or {}
+        if isinstance(answer_box, dict):
+            for key in ("answer", "snippet"):
+                if answer_box.get(key):
+                    pieces.append(answer_box.get(key))
+
+        knowledge = data.get("knowledgeGraph") or {}
+        if isinstance(knowledge, dict):
+            for key in ("description",):
+                if knowledge.get(key):
+                    pieces.append(knowledge.get(key))
+
+        organic = data.get("organic") or []
+        for item in organic[:3]:
+            if not isinstance(item, dict):
+                continue
+            if item.get("snippet"):
+                pieces.append(item.get("snippet"))
+
+        return make_three_to_five_lines(" ".join(str(x) for x in pieces if x))
+    except:
+        return ""
+
+def duckduckgo_search(query):
     try:
-        r=requests.get(f"https://api.duckduckgo.com/?q={q}&format=json")
-        return summary(r.json().get("AbstractText",""))
-    except: return ""
+        url = f"https://api.duckduckgo.com/?q={urllib.parse.quote(query)}&format=json&no_redirect=1&no_html=1&skip_disambig=1"
+        res = requests.get(url, timeout=8)
+        if res.status_code != 200:
+            return ""
 
-def wiki(q):
+        data = res.json()
+        pieces = []
+
+        if data.get("AbstractText"):
+            pieces.append(data.get("AbstractText"))
+
+        if data.get("Answer"):
+            pieces.append(data.get("Answer"))
+
+        related = data.get("RelatedTopics") or []
+        for item in related:
+            if len(pieces) >= 3:
+                break
+            if isinstance(item, dict):
+                if item.get("Text"):
+                    pieces.append(item.get("Text"))
+                else:
+                    topics = item.get("Topics") or []
+                    for sub in topics:
+                        if sub.get("Text"):
+                            pieces.append(sub.get("Text"))
+                            break
+
+        return make_three_to_five_lines(" ".join(str(x) for x in pieces if x))
+    except:
+        return ""
+
+def wikipedia_search(query):
     try:
-        r=requests.get(f"https://en.wikipedia.org/api/rest_v1/page/summary/{q}")
-        return summary(r.json().get("extract",""))
-    except: return ""
+        search_url = "https://en.wikipedia.org/w/api.php"
+        params = {
+            "action": "query",
+            "list": "search",
+            "srsearch": query,
+            "format": "json",
+            "utf8": 1,
+            "srlimit": 1,
+        }
+        search_res = requests.get(search_url, params=params, timeout=8)
+        if search_res.status_code != 200:
+            return ""
 
-def gemini(q):
-    if not GEMINI_API_KEY: return ""
-    try:
-        url=f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
-        r=requests.post(url,json={"contents":[{"parts":[{"text":q}]}]})
-        return summary(r.json()['candidates'][0]['content']['parts'][0]['text'])
-    except: return ""
+        search_json = search_res.json()
+        items = search_json.get("query", {}).get("search", [])
+        if not items:
+            return ""
 
-def local(q):
-    return "Take a slow breath.\nYou are safe.\nFocus on one step."
+        title = items[0].get("title", "").strip()
+        if not title:
+            return ""
 
-def AI(q):
-    for fn in [serper,ddg,wiki,gemini]:
-        res=fn(q)
-        if len(res)>20:
-            return res
-    return local(q)
+        summary_url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + urllib.parse.quote(title)
+        summary_res = requests.get(summary_url, timeout=8)
+        if summary_res.status_code != 200:
+            return ""
 
-# ================= DSS =================
-def dss(q):
-    q=q.lower()
-    if "suicide" in q: return ("Suicidal Risk","Critical","Immediate help","dss-red")
-    if "depress" in q: return ("Depression","Moderate","Consult","dss-orange")
-    return ("Stress","Mild","Lifestyle","dss-green")
+        summary_json = summary_res.json()
+        text = summary_json.get("extract") or summary_json.get("description") or ""
+        return make_three_to_five_lines(text)
+    except:
+        return ""
 
-# ================= INPUT =================
-st.subheader("💬 Enter your problem")
-query=st.text_area("Type here")
+def gemini_search(query):
+    if not GEMINI_API_KEY:
+        return ""
 
-if st.button("SEND"):
-    if query:
-        cond,sev,act,css=dss(query)
+    models = [
+        "models/gemini-2.0-flash",
+        "models/gemini-2.0-flash-001",
+        "models/gemini-2.0-flash-lite",
+        "models/gemini-flash-latest",
+    ]
 
-        st.markdown(f'<div class="bubble user">{query}</div>',unsafe_allow_html=True)
+    prompt = (
+        "Answer in 3 to 5 short lines only. "
+        "No bullets. No headings. No navigation text. No citations. "
+        "Be clear, concise, and medically cautious.\n\n"
+        f"User query: {query}"
+    )
 
-        st.markdown(f"""
-        <div class="{css}">
-        Condition: {cond}<br>
-        Severity: {sev}<br>
-        Action: {act}
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {"text": prompt}
+                ]
+            }
+        ]
+    }
+
+    for model in models:
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/{model}:generateContent?key={GEMINI_API_KEY}"
+            res = requests.post(url, json=payload, timeout=10)
+            if res.status_code != 200:
+                continue
+
+            data = res.json()
+            text = data["candidates"][0]["content"]["parts"][0]["text"]
+            return make_three_to_five_lines(text)
+        except:
+            continue
+
+    return ""
+
+def local_smart_ai(query):
+    q = query.lower()
+
+    if any(k in q for k in ["suicide", "kill myself", "end my life", "self harm", "harm myself"]):
+        return make_three_to_five_lines(
+            "This sounds urgent and needs immediate human support. Please contact emergency help or a trusted person now. Do not stay alone."
+        )
+
+    if any(k in q for k in ["depress", "sad", "hopeless", "low mood", "no interest", "worthless"]):
+        return make_three_to_five_lines(
+            "Depression can feel heavy and draining. Small routine steps and talking to a professional can help. Please seek support early."
+        )
+
+    if any(k in q for k in ["anxiety", "panic", "worry", "fear", "nervous"]):
+        return make_three_to_five_lines(
+            "Anxiety often makes the body feel tense and restless. Slow breathing and grounding can help. Counseling may improve control."
+        )
+
+    if any(k in q for k in ["sleep", "insomnia", "wake up", "sleepless"]):
+        return make_three_to_five_lines(
+            "Sleep problems often come from stress or irregular habits. Keep a fixed sleep routine and avoid screens before bed. Seek help if it continues."
+        )
+
+    if any(k in q for k in ["premature ejaculation", "ejaculation", "sexual", "sexual issues", "erection", "erectile"]):
+        return make_three_to_five_lines(
+            "Sexual health concerns are common and treatable. Stress, anxiety, and habit patterns can play a role. A clinician can guide proper care."
+        )
+
+    if any(k in q for k in ["addiction", "porn", "masturbation", "craving", "habit"]):
+        return make_three_to_five_lines(
+            "Addictive habits can become repetitive and hard to control. Structure, support, and counseling can help. Start with one small change today."
+        )
+
+    if any(k in q for k in ["relationship", "marriage", "partner", "couple"]):
+        return make_three_to_five_lines(
+            "Relationship stress can affect mood and thinking. Calm communication and clarity help reduce conflict. Counseling can support both sides."
+        )
+
+    return make_three_to_five_lines(
+        "Take a slow breath and focus on one small step. Your concern matters and support can help. If symptoms persist, meet a professional."
+    )
+
+def smart_ai(query):
+    chain = [
+        ("Web AI (Serper)", serper_search(query)),
+        ("Web AI (DuckDuckGo)", duckduckgo_search(query)),
+        ("Web AI (Wikipedia)", wikipedia_search(query)),
+        ("Gemini AI", gemini_search(query)),
+    ]
+
+    for source, raw in chain:
+        if valid_answer(raw):
+            return source, raw
+
+    return "Local Smart AI", local_smart_ai(query)
+
+# =========================
+# DSS
+# =========================
+def dss_score(query):
+    q = query.lower()
+
+    if any(k in q for k in ["suicide", "kill myself", "end my life", "self harm", "harm myself"]):
+        return "Suicidal Risk", "Critical", "Immediate help required", "dss-red"
+
+    if any(k in q for k in ["hopeless", "worthless", "no energy", "cant get out of bed", "can't get out of bed"]):
+        return "Depression", "Severe", "Consult psychologist urgently", "dss-red"
+
+    if any(k in q for k in ["depress", "sad", "low mood", "loss of interest"]):
+        return "Depression", "Moderate", "Consult psychologist", "dss-orange"
+
+    if any(k in q for k in ["panic", "anxiety", "worry", "fear", "nervous"]):
+        if any(k in q for k in ["can t breathe", "can't breathe", "shaking", "faint", "severe"]):
+            return "Anxiety", "Severe", "Seek prompt evaluation", "dss-red"
+        return "Anxiety", "Mild", "Relaxation advised", "dss-green"
+
+    if any(k in q for k in ["sleep", "insomnia", "wake up", "sleepless"]):
+        return "Sleep Disorder", "Mild", "Improve sleep routine", "dss-green"
+
+    if any(k in q for k in ["premature ejaculation", "ejaculation", "sexual", "erection", "erectile"]):
+        return "Sexual Health Concern", "Moderate", "Consult psychologist", "dss-orange"
+
+    if any(k in q for k in ["addiction", "porn", "masturbation", "habit"]):
+        return "Behavioral Addiction", "Moderate", "Counseling advised", "dss-orange"
+
+    if any(k in q for k in ["relationship", "marriage", "partner", "couple"]):
+        return "Relationship Stress", "Mild", "Communication support helps", "dss-green"
+
+    return "Stress", "Mild", "Lifestyle care", "dss-green"
+
+# =========================
+# RENDERERS
+# =========================
+def render_message_user(text):
+    safe = html_lib.escape(text).replace("\n", "<br>")
+    st.markdown(
+        f"""
+        <div class="bubble user-bubble">
+            <div class="bubble-head">
+                <span class="pill">{icon_user()}<span>You</span></span>
+            </div>
+            <div class="bubble-body">{safe}</div>
         </div>
-        """,unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True,
+    )
 
-        st.markdown(f'<div class="bubble ai">{AI(query)}</div>',unsafe_allow_html=True)
+def render_message_dss(condition, severity, action, css_class):
+    st.markdown(
+        f"""
+        <div class="dss-card {css_class}">
+            <div class="bubble-head">
+                <span class="pill">{icon_brain()}<span>Medical DSS</span></span>
+            </div>
+            <div class="bubble-body">
+                <strong>Condition:</strong> {html_lib.escape(condition)}<br>
+                <strong>Severity:</strong> {html_lib.escape(severity)}<br>
+                <strong>Action:</strong> {html_lib.escape(action)}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-# ================= FORM =================
-st.subheader("📞 Book Consultation")
+def render_message_ai(source, summary_text):
+    safe_summary = html_lib.escape(summary_text).replace("\n", "<br>")
+    st.markdown(
+        f"""
+        <div class="bubble ai-bubble">
+            <div class="bubble-head">
+                <span class="pill">{icon_bot()}<span>{html_lib.escape(source)}</span></span>
+            </div>
+            <div class="bubble-body">{safe_summary}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-name=st.text_input("Name")
-phone=st.text_input("Mobile")
-cause=st.selectbox("Concern",["Stress","Depression","Anxiety","Addiction","Relationship","Sexual","Other"])
+def render_section_header(icon_html, title_text):
+    st.markdown(
+        f"""
+        <div class="section-header">
+            <div class="section-icon">{icon_html}</div>
+            <div class="section-title">{html_lib.escape(title_text)}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-if st.button("Submit Consultation"):
-    msg=f"""I would like to request an appointment with Psychologist D.Durga.
+# =========================
+# SESSION STATE
+# =========================
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-Name: {name}
-Mobile: {phone}
-Cause: {cause}
+if "last_whatsapp_url" not in st.session_state:
+    st.session_state.last_whatsapp_url = ""
 
-Please call back."""
-    url=f"https://wa.me/{WHATSAPP_NUMBER}?text={urllib.parse.quote(msg)}"
-    st.markdown(f'<a href="{url}" target="_blank" class="footer-btn">CLICK TO OPEN WHATSAPP</a>',unsafe_allow_html=True)
+# =========================
+# INPUT SECTION
+# =========================
+render_section_header(icon_chat(), "Enter your problem")
 
-# ================= FLOAT =================
-st.markdown(f"""
-<a href="https://wa.me/{WHATSAPP_NUMBER}" target="_blank">
-<div class="float whatsapp">💬</div></a>
+query = st.text_area(
+    "Type here",
+    key="query_text",
+    height=140,
+    placeholder="Explain your concern clearly",
+)
 
-<a href="tel:+{WHATSAPP_NUMBER}">
-<div class="float call">📞</div></a>
-""",unsafe_allow_html=True)
+if st.button("SEND", key="send_query_btn"):
+    if query.strip():
+        condition, severity, action, css_class = dss_score(query)
+        source, answer = smart_ai(query)
 
-# ================= FOOTER =================
-st.markdown(f"""
-<div class="footer-bar">
-<a href="https://wa.me/{WHATSAPP_NUMBER}" target="_blank" class="footer-btn">
-📞 💬 BOOK CONSULTATION NOW
-</a>
-</div>
-""",unsafe_allow_html=True)
+        st.session_state.messages.append(
+            {
+                "type": "user",
+                "text": query,
+            }
+        )
+        st.session_state.messages.append(
+            {
+                "type": "dss",
+                "condition": condition,
+                "severity": severity,
+                "action": action,
+                "css_class": css_class,
+            }
+        )
+        st.session_state.messages.append(
+            {
+                "type": "ai",
+                "source": source,
+                "text": answer,
+            }
+        )
+
+# =========================
+# CONVERSATION
+# =========================
+render_section_header(icon_chat(), "Conversation")
+
+for msg in st.session_state.messages:
+    if msg["type"] == "user":
+        render_message_user(msg["text"])
+    elif msg["type"] == "dss":
+        render_message_dss(
+            msg["condition"],
+            msg["severity"],
+            msg["action"],
+            msg["css_class"],
+        )
+    else:
+        render_message_ai(msg["source"], msg["text"])
+
+st.markdown("<div style='height: 24px;'></div>", unsafe_allow_html=True)
+
+# =========================
+# CONSULTATION FORM
+# =========================
+render_section_header(icon_phone(), "Book Consultation")
+
+with st.form("consultation_form", clear_on_submit=False):
+    name = st.text_input("Name")
+    phone = st.text_input("Mobile Number")
+
+    cause = st.selectbox(
+        "Concern",
+        [
+            "Stress",
+            "Anxiety",
+            "Depression",
+            "Panic Disorder",
+            "OCD",
+            "Bipolar Disorder",
+            "Sleep Disorder",
+            "Relationship Issues",
+            "Addiction",
+            "Sexual Health Issues",
+            "Other",
+        ],
+    )
+
+    mode = st.radio("Session Mode", ["Online", "In-Person"])
+    time_slot = st.selectbox("Preferred Time", ["Morning", "Afternoon", "Evening"])
+    location = st.text_input("Location")
+
+    submitted = st.form_submit_button("Submit Consultation")
+
+if submitted:
+    if name.strip() and phone.strip():
+        message = (
+            "I would like to request an appointment with Psychologist D.Durga.\n\n"
+            f"Name: {name}\n"
+            f"Mobile: {phone}\n"
+            f"Concern: {cause}\n"
+            f"Session Mode: {mode}\n"
+            f"Preferred Time: {time_slot}\n"
+            f"Location: {location}\n\n"
+            "Please call back to discuss further."
+        )
+
+        whatsapp_url = "https://wa.me/{num}?text={text}".format(
+            num=WHATSAPP_NUMBER,
+            text=urllib.parse.quote(message),
+        )
+
+        st.session_state.last_whatsapp_url = whatsapp_url
+        st.success("Click below to open WhatsApp and send the message.")
+    else:
+        st.warning("Please enter both Name and Mobile Number.")
+
+if st.session_state.last_whatsapp_url:
+    st.markdown(
+        f"""
+        <a class="cta-link" href="{st.session_state.last_whatsapp_url}" target="_blank">
+            <div class="cta-card">
+                {icon_whatsapp()}
+                <span>CLICK TO OPEN WHATSAPP</span>
+            </div>
+        </a>
+        """,
+        unsafe_allow_html=True,
+    )
+
+# =========================
+# FLOATING BUTTONS
+# =========================
+st.markdown(
+    f"""
+    <a href="https://wa.me/{WHATSAPP_NUMBER}" target="_blank" aria-label="WhatsApp">
+        <div class="float-btn float-wa">{icon_whatsapp()}</div>
+    </a>
+
+    <a href="tel:+{WHATSAPP_NUMBER}" aria-label="Call">
+        <div class="float-btn float-call">{icon_phone()}</div>
+    </a>
+    """,
+    unsafe_allow_html=True,
+)
+
+# =========================
+# FIXED BOTTOM BOOK APPOINTMENT BUTTON
+# =========================
+st.markdown(
+    f"""
+    <div class="footer-bar">
+        <a href="https://wa.me/{WHATSAPP_NUMBER}" target="_blank">
+            <div class="footer-btn">
+                <span class="footer-icon">{icon_phone()}</span>
+                <span class="footer-icon">{icon_whatsapp()}</span>
+                <span>BOOK CONSULTATION NOW</span>
+            </div>
+        </a>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
