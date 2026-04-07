@@ -1317,6 +1317,55 @@ st.markdown("""
 
 </div>
 """, unsafe_allow_html=True)
+import time
+
+reviews = [
+    ("Ravi Kumar", "Very supportive and understanding doctor. Helped me overcome anxiety."),
+    ("Priya S", "Professional counselling and clear guidance. Highly recommended."),
+    ("Arun K", "I felt comfortable from the first session. Very helpful approach."),
+    ("Meena R", "Helped me manage stress and improve daily life."),
+]
+
+# rotation logic
+index = int(time.time() / 4) % len(reviews)
+name, text = reviews[index]
+
+st.markdown(f"""
+<style>
+
+.review-box {{
+    background: linear-gradient(135deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06));
+    border-radius: 14px;
+    padding: 12px;
+    color: white;
+    margin-bottom: 10px;
+    border: 1px solid rgba(255,255,255,0.2);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+}}
+
+.review-name {{
+    font-weight: 800;
+    margin-bottom: 4px;
+}}
+
+.review-stars {{
+    color: #FFD700;
+    font-size: 1rem;
+}}
+
+.review-text {{
+    font-style: italic;
+    opacity: 0.95;
+}}
+
+</style>
+
+<div class="review-box">
+    <div class="review-name">{name}</div>
+    <div class="review-stars">★★★★★</div>
+    <div class="review-text">"{text}"</div>
+</div>
+""", unsafe_allow_html=True)
 # =========================
 # FIXED BOTTOM BOOK APPOINTMENT BUTTON
 # =========================
