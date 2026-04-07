@@ -1207,7 +1207,46 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+st.markdown("""
+<style>
 
+/* ===== GOOGLE REVIEW FOOTER STRIP ===== */
+.review-footer {
+    margin-top: 10px;
+    text-align: center;
+}
+
+.review-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: white;
+    color: #111 !important;
+    font-weight: 800;
+    text-decoration: none !important;
+    font-size: 0.95rem;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+}
+
+.review-stars {
+    color: #FFD700;
+    font-size: 1rem;
+}
+
+</style>
+
+<div class="review-footer">
+
+<a class="review-btn" href="https://share.google/sFWlZ2DOA3G9PxCl1" target="_blank">
+    <span class="review-stars">★★★★★</span>
+    <span>4.8 Google Reviews • Durga Counseling Centre</span>
+</a>
+
+</div>
+""", unsafe_allow_html=True)
 # =========================
 # FIXED BOTTOM BOOK APPOINTMENT BUTTON
 # =========================
