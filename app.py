@@ -1318,7 +1318,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True) 
 import time
-
+\n
 reviews = [
     ("Ravi Kumar", "Very supportive and understanding doctor. Helped me overcome anxiety."),
     ("Priya S", "Professional counselling and clear guidance. Highly recommended."),
