@@ -1246,7 +1246,7 @@ st.markdown("""
 </a>
 
 </div>
-""", unsafe_allow_html=True) <br>
+""", unsafe_allow_html=True) 
 
 st.markdown("""
 <style>
@@ -1316,7 +1316,7 @@ st.markdown("""
 </a>
 
 </div>
-""", unsafe_allow_html=True) <br><br>
+""", unsafe_allow_html=True) 
 import time
 
 reviews = [
