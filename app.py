@@ -1247,6 +1247,76 @@ st.markdown("""
 
 </div>
 """, unsafe_allow_html=True)
+
+st.markdown("""
+<style>
+
+/* ===== PREMIUM REVIEW STRIP ===== */
+.review-footer {
+    margin-top: 12px;
+    text-align: center;
+}
+
+/* 🔥 Glass + Gradient Button */
+.review-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+
+    padding: 10px 16px;
+    border-radius: 14px;
+
+    /* Gradient matching app */
+    background: linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.08));
+    
+    /* Glass effect */
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+
+    /* Border subtle */
+    border: 1px solid rgba(255,255,255,0.25);
+
+    color: white !important;
+    font-weight: 900;
+    text-decoration: none !important;
+    font-size: 0.95rem;
+
+    /* Premium shadow */
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+
+    transition: all 0.3s ease;
+}
+
+/* 🔥 Hover / Tap effect */
+.review-btn:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 12px 28px rgba(0,0,0,0.35);
+}
+
+/* ⭐ Stars glow */
+.review-stars {
+    color: #FFD700;
+    font-size: 1.05rem;
+    text-shadow: 0 0 8px rgba(255,215,0,0.6);
+}
+
+/* Text style */
+.review-text {
+    opacity: 0.95;
+}
+
+</style>
+
+<div class="review-footer">
+
+<a class="review-btn" href="https://share.google/sFWlZ2DOA3G9PxCl1" target="_blank">
+    <span class="review-stars">★★★★★</span>
+    <span class="review-text">4.8 Google Reviews • Durga Counseling Centre</span>
+</a>
+
+</div>
+""", unsafe_allow_html=True)
 # =========================
 # FIXED BOTTOM BOOK APPOINTMENT BUTTON
 # =========================
