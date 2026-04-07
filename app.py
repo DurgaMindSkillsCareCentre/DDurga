@@ -1242,7 +1242,7 @@ st.markdown("""
 
 <a class="review-btn" href="https://share.google/sFWlZ2DOA3G9PxCl1" target="_blank">
     <span class="review-stars">★★★★★</span>
-    <span>4.8 Google Reviews. Rated by 100+ Patients .Trusted by 1000+ Clients.  • Durga Counseling Centre. CLICK TO SEE GOOGLE REVIEWS.</span>
+    <span>4.8 Google Reviews. Rated by 100+ Patients .Trusted by 1000+ Clients.  <br>• Durga Counseling Centre. <br> CLICK TO SEE GOOGLE REVIEWS.</span>
 </a>
 
 </div>
